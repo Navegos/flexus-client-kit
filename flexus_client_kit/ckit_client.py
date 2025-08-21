@@ -1,0 +1,140 @@
+import os
+import asyncio
+from dataclasses import dataclass
+from typing import Optional, Any, List
+
+import gql
+from gql.transport.websockets import WebsocketsTransport
+from gql.transport.aiohttp import AIOHTTPTransport
+
+from flexus_client_kit import ckit_logs
+from flexus_client_kit import ckit_passwords, gql_utils
+
+
+class FlexusClient:
+    def __init__(self,
+        service_name: str,
+        *,
+        api_key: str = None,
+        use_ws_ticket: bool = False,
+        base_url: Optional[str] = None,
+        endpoint: str = "/v1/graphql",
+        skip_logger_init: bool = False,
+    ):
+        if not skip_logger_init:
+            ckit_logs.setup_logger()
+        self.api_key = api_key
+        self.use_ws_ticket = use_ws_ticket
+        self.base_url_http = base_url or os.getenv("FLEXUS_API_BASEURL", "http://localhost:8008")
+        self.base_url_ws = self.base_url_http.replace("https://", "wss://").replace("http://", "ws://")
+        self.http_url = self.base_url_http.rstrip("/") + endpoint
+        self.websocket_url = self.base_url_ws.rstrip("/") + endpoint
+        self.endpoint = endpoint
+        self.service_name = service_name
+        if api_key is None:
+            assert endpoint != "/v1/graphql", "Without API Key, you probably mean to access a superuser endpoint, not a regular user endpoint?"
+
+    async def use_http(self) -> gql.Client:
+        if self.api_key is not None:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "x-flexus-service-name": self.service_name,
+            }
+        elif self.use_ws_ticket:
+            ws_ticket = await ckit_passwords.get_flexus_ws_ticket(self.service_name)
+            headers = {
+                "x-flexus-ws-ticket": ws_ticket,
+                "x-flexus-service-name": self.service_name
+            }
+        else:
+            superpassword_curr, _ = await ckit_passwords.get_superuser_token_from_vault(self.endpoint)
+            headers = {
+                "x-flexus-superuser": superpassword_curr,
+                "x-flexus-service-name": self.service_name,
+            }
+        transport = AIOHTTPTransport(url=self.http_url, headers=headers)
+        return gql.Client(transport=transport, fetch_schema_from_transport=False)
+
+    async def use_ws(self) -> gql.Client:
+        if self.api_key is not None:
+            payload = {
+                "apikey": self.api_key,
+                "x-flexus-service-name": self.service_name,
+            }
+        elif self.use_ws_ticket:
+            ws_ticket = await ckit_passwords.get_flexus_ws_ticket(self.service_name)
+            payload = {
+                "x-flexus-ws-ticket": ws_ticket,
+                "x-flexus-service-name": self.service_name
+            }
+        else:
+            superpassword_curr, _ = await ckit_passwords.get_superuser_token_from_vault(self.endpoint)
+            payload = {
+                "x-flexus-superuser": superpassword_curr,
+                "x-flexus-service-name": self.service_name,
+            }
+        transport = WebsocketsTransport(url=self.websocket_url, init_payload=payload)
+        return gql.Client(transport=transport, fetch_schema_from_transport=False)
+
+
+@dataclass
+class FWorkspaceInvitationOutput:
+    wsi_id: str
+    wsi_invite_fuser_id: str
+    wsi_invited_by_fuser_id: str
+    wsi_fgroup_id: str
+    wsi_roles: int
+    group_name: str
+
+
+@dataclass
+class FWorkspaceOutput:
+    ws_id: str
+    ws_owner_fuser_id: str
+    ws_root_group_id: str
+    ws_archived_ts: float
+    ws_created_ts: float
+    root_group_name: str
+    have_admin: bool
+    have_coins_exactly: int
+    have_coins_enough: bool
+
+
+@dataclass
+class BasicStuffOutput:
+    fuser_id: str
+    workspaces: List[FWorkspaceOutput]
+    my_own_ws_id: Optional[str]
+    invitations: Optional[List[FWorkspaceInvitationOutput]]
+    fuser_psystem: Optional[Any]
+    is_oauth: bool
+
+
+async def query_basic_stuff(
+    client: FlexusClient,
+    want_invitations: bool = False,
+) -> BasicStuffOutput:
+    http = await client.use_http()
+    async with http as h:
+        r = await h.execute(
+            gql.gql(f"""query CkitClientTest($w: Boolean!) {{
+                query_basic_stuff(want_invitations: $w) {{
+                    {gql_utils.gql_fields(BasicStuffOutput)}
+                }}
+            }}"""),
+            variable_values={"w": want_invitations},
+        )
+        return gql_utils.dataclass_from_dict(r["query_basic_stuff"], BasicStuffOutput)
+
+
+async def test() -> None:
+    client = FlexusClient("ckit_client_test", api_key="sk_alice_123456")
+    r = await query_basic_stuff(client, True)
+    print("Look, Alice has %d workspaces!" % len(r.workspaces))
+    for ws in r.workspaces:
+        print("  Workspace %r has %d coins" % (ws.ws_id, ws.have_coins_exactly))
+    print("Full response:", r)
+
+
+if __name__ == "__main__":
+    asyncio.run(test())
