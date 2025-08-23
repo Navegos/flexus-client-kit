@@ -7,6 +7,11 @@ import gql
 
 from flexus_client_kit import ckit_client, gql_utils
 
+def encode_market_version(v: str) -> int:
+    if not re.match(r'^\d{1,4}\.\d{1,4}\.\d{1,4}$', v):
+        raise ValueError('bad version')
+    a, b, c = [int(x) for x in v.split('.')]
+    return a * 100_000_000 + b * 10_000 + c
 
 @dataclass
 class FBotInstallOutput:
