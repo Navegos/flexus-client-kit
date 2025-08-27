@@ -73,7 +73,7 @@ async def list_files(
     query = {}
     if path_prefix:
         query["path"] = {"$regex": f"^{path_prefix}"}
-    cursor = mongo_collection.find(query, {"data": 0})
+    cursor = mongo_collection.find(query, {"data": 0}).sort("ctime", -1)
     if limit:
         cursor = cursor.limit(limit)
 
