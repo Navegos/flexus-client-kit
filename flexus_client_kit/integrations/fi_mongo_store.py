@@ -16,9 +16,18 @@ MONGO_STORE_TOOL = ckit_cloudtool.CloudTool(
     parameters={
         "type": "object",
         "properties": {
-            "op": {"type": "string", "description": "Operation to perform: 'upload', 'download', 'list', 'cat', 'delete', or 'help'"},
-            "args": {"type": "object", "description": ""},
+            "op": {
+                "type": "string",
+                "description": "Operation to perform: 'upload', 'download', 'list', 'cat', 'delete', or 'help'"
+            },
+            "args": {
+                "type": "object",
+                "description": "Operation-specific arguments. For 'upload'/'download'/'delete'/'cat': requires 'path'. "
+                               "For 'list': optional 'path' for prefix filtering. "
+                               "For 'cat': optional 'line_range' (e.g., '13:37') and 'safety_valve' (e.g., '10k') for large files"
+            },
         },
+        "required": ["op", "args"],
     },
 )
 
@@ -57,7 +66,7 @@ async def handle_mongo_store(
     op = model_produced_args.get("op", "")
     args, args_error = ckit_cloudtool.sanitize_args(model_produced_args)
     if args_error:
-        return args_error
+        return f"{args_error}\n\n{HELP}"
 
     path = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "path", "")
 
@@ -66,7 +75,7 @@ async def handle_mongo_store(
 
     if op == "upload":
         if not path:
-            return "Error: path parameter required for upload operation"
+            return f"Error: path parameter required for upload operation\n\n{HELP}"
         realpath = os.path.join(workdir, path)
         if not os.path.exists(realpath):
             return f"Error: File {path} does not exist"
@@ -87,7 +96,7 @@ async def handle_mongo_store(
 
     elif op == "download":
         if not path:
-            return "Error: path parameter required for download operation"
+            return f"Error: path parameter required for download operation\n\n{HELP}"
         path_error = validate_path(path)
         if path_error:
             return f"Error: {path_error}"
@@ -130,7 +139,7 @@ async def handle_mongo_store(
 
     elif op == "cat":
         if not path:
-            return "Error: path parameter required for cat operation"
+            return f"Error: path parameter required for cat operation\n\n{HELP}"
         path_error = validate_path(path)
         if path_error:
             return f"Error: {path_error}"
@@ -145,7 +154,7 @@ async def handle_mongo_store(
 
     elif op == "delete":
         if not path:
-            return "Error: path parameter required for delete operation"
+            return f"Error: path parameter required for delete operation\n\n{HELP}"
         path_error = validate_path(path)
         if path_error:
             return f"Error: {path_error}"
