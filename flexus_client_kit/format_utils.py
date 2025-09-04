@@ -21,21 +21,14 @@ def get_json_schema(data: Union[dict, list]) -> Optional[str]:
         builder = SchemaBuilder()
         builder.add_object(data)
         schema = builder.to_schema()
+        schema_str = json.dumps(schema, indent=2)
+        max_schema_lines = 200
+        schema_lines = schema_str.split('\n')
+        if len(schema_lines) > max_schema_lines:
+            schema_lines = schema_lines[:max_schema_lines] + ['  ...', '}']
+            schema_str = '\n'.join(schema_lines)
         
-        if "properties" in schema:
-            props = list(schema["properties"].keys())
-            if len(props) > 20:
-                props = props[:20] + ["..."]
-            return f"Schema: {schema.get('type', 'object')} with properties: {', '.join(props)}"
-        elif schema.get("type") == "array" and "items" in schema:
-            item_type = schema["items"].get("type", "mixed")
-            if item_type == "object" and "properties" in schema["items"]:
-                props = list(schema["items"]["properties"].keys())
-                if len(props) > 10:
-                    props = props[:10] + ["..."]
-                return f"Schema: array of objects with properties: {', '.join(props)}"
-            return f"Schema: array of {item_type}"
-        return f"Schema: {schema.get('type', 'unknown')}"
+        return f"Schema:\n{schema_str}"
     except Exception as e:
         logger.debug(f"Failed to generate schema: {e}")
         return None
@@ -84,13 +77,13 @@ def format_json_output(
         f"   Size: {size_bytes:,} bytes ({size_kb:.1f} KB)"
     ]
     
-    if schema:
-        header_lines.append(f"   {schema}")
-    
     if isinstance(data, list):
         header_lines.append(f"   Items: {len(data)}")
     elif isinstance(data, dict):
         header_lines.append(f"   Keys: {len(data)}")
+    
+    if schema:
+        header_lines.append(f"   {schema}")
     
     truncated = False
     if size_kb > safety_valve_kb:
