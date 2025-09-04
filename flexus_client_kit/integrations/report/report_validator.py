@@ -69,7 +69,6 @@ def validate_html_content(
         return False, errors
 
     dangerous_patterns = [
-        r'on\w+\s*=',
         r'<iframe[^>]*>',
     ]
     for pattern in dangerous_patterns:
@@ -113,7 +112,6 @@ def sanitize_html(content: str) -> str:
     Returns:
         Sanitized HTML string
     """
-    content = re.sub(r'\s*on\w+\s*=\s*["\'][^"\']*["\']', '', content, flags=re.IGNORECASE)
     content = re.sub(r'<iframe[^>]*>.*?</iframe>', '', content, flags=re.DOTALL | re.IGNORECASE)
     return content
 
