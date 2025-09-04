@@ -140,7 +140,7 @@ async def bot_install_from_marketplace(
             gql.gql("""mutation PersonaUpsert($ws: String!, $g: String, $mn: String!, $id: String!, $name: String!, $setup: String!, $v: Int, $dev: Boolean!) {
                 bot_install_from_marketplace(
                     ws_id: $ws,
-                    inside_fgroup: $g,
+                    inside_fgroup_id: $g,
                     persona_marketable_name: $mn,
                     persona_id: $id,
                     persona_name: $name,
