@@ -5,8 +5,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 class HTMLValidator(HTMLParser):
-    def __init__(self):
+    def __init__(self, content):
         super().__init__()
+        self.content = content
         self.tag_stack = []
         self.errors = []
         self.found_tags = set()
@@ -57,7 +58,7 @@ def validate_html_content(
     errors = []
 
     # Basic HTML validation
-    parser = HTMLValidator()
+    parser = HTMLValidator(content)
     try:
         parser.feed(content)
         is_valid, parse_errors = parser.validate()
@@ -67,43 +68,36 @@ def validate_html_content(
         errors.append(f"HTML parsing error: {str(e)}")
         return False, errors
 
-    # Check for dangerous content
     dangerous_patterns = [
-        r'on\w+\s*=',  # onclick, onload, etc.
+        r'on\w+\s*=',
         r'<iframe[^>]*>',
     ]
-
     for pattern in dangerous_patterns:
         if re.search(pattern, content, re.IGNORECASE | re.DOTALL):
             errors.append(f"Dangerous content detected: {pattern}")
 
-    # Apply validation rules if provided
     if validation_rules:
-        # Check expected elements
+        # for some reason it filters out <script> tags
         if "expected_elements" in validation_rules:
             for element in validation_rules["expected_elements"]:
                 if element not in parser.found_tags:
                     errors.append(f"Missing required element: <{element}>")
 
-        # Check required classes
         if "required_classes" in validation_rules:
             for cls in validation_rules["required_classes"]:
                 if cls not in parser.found_classes:
                     errors.append(f"Missing required CSS class: {cls}")
 
-        # Check minimum td count
         if "min_td_count" in validation_rules:
             td_count = content.count("<td")
             if td_count < validation_rules["min_td_count"]:
                 errors.append(f"Insufficient <td> elements: found {td_count}, need {validation_rules['min_td_count']}")
 
-        # Check required text
         if "required_text" in validation_rules:
-            full_text = " ".join(parser.text_content).lower()
+            lower_content = content.lower()
             for required in validation_rules["required_text"]:
-                # Handle placeholders like {competitor}
                 if not required.startswith("{"):
-                    if required.lower() not in full_text:
+                    if required.lower() not in lower_content:
                         errors.append(f"Missing required text: {required}")
 
     return len(errors) == 0, errors
@@ -119,19 +113,10 @@ def sanitize_html(content: str) -> str:
     Returns:
         Sanitized HTML string
     """
-    # Remove any script tags
-    content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.DOTALL | re.IGNORECASE)
-
-    # Remove javascript: protocols
-    content = re.sub(r'javascript:', '', content, flags=re.IGNORECASE)
-
-    # Remove event handlers
     content = re.sub(r'\s*on\w+\s*=\s*["\'][^"\']*["\']', '', content, flags=re.IGNORECASE)
-
-    # Remove iframes
     content = re.sub(r'<iframe[^>]*>.*?</iframe>', '', content, flags=re.DOTALL | re.IGNORECASE)
-
     return content
+
 
 def validate_json_schema(
     data: Any,
