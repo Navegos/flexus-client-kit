@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, Callable, Awaitable, List
 import httpx
 from PIL import Image
-
 import gql
 
 from flexus_client_kit import ckit_cloudtool
@@ -55,17 +54,12 @@ SLACK_TOOL = ckit_cloudtool.CloudTool(
     },
 )
 
-def parse_channel_slash_thread(channel_slash_thread: str) -> tuple[Optional[str], Optional[str]]:
-    if not isinstance(channel_slash_thread, str):
+def parse_channel_slash_thread(s: str) -> tuple[Optional[str], Optional[str]]:
+    if not isinstance(s, str):
         return None, None
-    match = re.match(r'^#?([^/]+)(?:/(.+))?$', channel_slash_thread)
-    if not match:
-        return None, None
-    channel_name = match.group(1)
-    identifier = match.group(2)
-    if identifier:
-        return channel_name, identifier
-    return channel_name, None
+    s = s[1:] if s.startswith("#") else s
+    parts = s.split("/", 1)
+    return parts[0], parts[1] if len(parts) > 1 else None
 
 FORMATTING = """
 In slack messages, formatting is *bold* _italic_ ~strikeout~. Tables and headers don't work.
@@ -98,7 +92,38 @@ slack(op="post", args={"channel_slash_thread": "channel_name", "localfile_path":
 
 slack(op="uncapture")
     If you don't want to talk anymore, call this instead of answering.
+
+slack(op="skip")
+    Ignore the most recent message but keep capturing the thread. Useful for unrelated messages (e.g. from other participants).
 """ + FORMATTING
+
+
+SLACK_SETUP_SCHEMA = [
+   {
+        "bs_name": "SLACK_BOT_TOKEN",
+        "bs_type": "string_long",
+        "bs_default": "",
+        "bs_group": "Slack",
+        "bs_importance": 0,
+        "bs_description": "Bot User OAuth Token from Slack app settings (starts with xoxb-)",
+    },
+    {
+        "bs_name": "SLACK_APP_TOKEN",
+        "bs_type": "string_long",
+        "bs_default": "",
+        "bs_group": "Slack",
+        "bs_importance": 0,
+        "bs_description": "App-Level Token from Slack app settings (starts with xapp-)",
+    },
+    {
+        "bs_name": "slack_should_join",
+        "bs_type": "string_long",
+        "bs_default": "#general,#random,#support",
+        "bs_group": "Slack",
+        "bs_importance": 0,
+        "bs_description": "Comma-separated list of Slack channels the bot should automatically join",
+    },
+]
 
 
 @dataclass
@@ -129,6 +154,7 @@ class IntegrationSlack:
             self.reactive_slack = AsyncApp(token=SLACK_BOT_TOKEN)
             self._setup_event_handlers()
         except Exception as e:
+            logger.info(f"Failed to connect and setup event handlers: {type(e).__name__} {e}")
             self.problems_other.append("%s %s" % (type(e).__name__, e))
             self.reactive_slack = None
         self.activity_callback: Optional[Callable[[ActivitySlack, bool], Awaitable[None]]] = None
@@ -149,6 +175,7 @@ class IntegrationSlack:
             self.socket_mode_something = AsyncSocketModeHandler(self.reactive_slack, self.SLACK_APP_TOKEN)
             self.reactive_task = asyncio.create_task(self.socket_mode_something.start_async())
         except Exception as e:
+            logger.exception("Failed to start socket mode")
             self.problems_other.append("%s %s" % (type(e).__name__, e))
             self.socket_mode_something = None
 
@@ -319,7 +346,7 @@ class IntegrationSlack:
             try:
                 web_api_client: AsyncWebClient = self.reactive_slack.client
                 thirty_minutes_ago = str(int(time.time() - 30*60))
-                
+
                 text_content = ""
                 image_parts = []
                 file_summaries = []
@@ -331,7 +358,7 @@ class IntegrationSlack:
                         else:
                             author_name = "unknown_user"
                         text_content += f"👤{author_name}\n\n{text}\n\n"
-                    
+
                     files = msg.get('files', [])
                     for file_info in files[:2]:  # Limit to 2 files per message to avoid overwhelming
                         try:
@@ -346,18 +373,18 @@ class IntegrationSlack:
                                 else:
                                     file_summaries.append(f"[Binary file: {filename} ({len(file_bytes)} bytes)]")
                         except Exception as e:
-                            logger.error(f"Error processing file during capture: {e}")
-                
+                            logger.exception("Error processing file during capture")
+
                 all_message_parts = []
                 if text_content:
                     all_message_parts.append({"m_type": "text", "m_content": text_content.strip()})
-                
+
                 if file_summaries:
                     files_text = "\n📎 Attached files:\n" + "\n".join(file_summaries)
                     all_message_parts.append({"m_type": "text", "m_content": files_text})
-                
+
                 all_message_parts.extend(image_parts)
-                
+
                 logger.info("Successful capture %s <-> %s, posting %d parts into the captured thread" % (something_id_slash_thread, toolcall.fcall_ft_id, len(all_message_parts)))
                 http = await self.fclient.use_http()
                 if all_message_parts:
@@ -392,6 +419,13 @@ class IntegrationSlack:
                 r += "Uncaptured successfully. This thread is no longer connected to Slack.\n"
             except Exception as e:
                 r += "ERROR: %s %s\n" % (type(e).__name__, e)
+
+        elif op == "skip":
+            captured_thread = self.rcx.latest_threads.get(toolcall.fcall_ft_id, None)
+            if not captured_thread or not captured_thread.thread_fields.ft_app_searchable or not captured_thread.thread_fields.ft_app_searchable.startswith("slack/"):
+                return "This thread is not capturing any Slack conversation. Use 'capture' first to start capturing a thread."
+
+            r += "Great, other people are talking, thread is still captured, any new messages will appear in this thread.\n"
 
         else:
             r += "Unknown operation %r, try \"help\"\n\n" % op
@@ -475,22 +509,18 @@ class IntegrationSlack:
 
         event_type = slack_event["type"]
         thread_ts = slack_event.get("thread_ts", "")
+
         if event_type == "app_mention":
             what_happened = "i_was_mentioned"
         elif event_type == "message":
-            if slack_event["channel_type"] == "channel":
-                what_happened = "message/channel"
-            elif slack_event["channel_type"] == "im":
-                what_happened = "message/im"
-            elif slack_event["channel_type"] == "group":
-                what_happened = "message/group"
-            elif slack_event["channel_type"] == "mpim":
-                what_happened = "messsage/mpim"
+            channel_type = slack_event["channel_type"]
+            if channel_type in {"channel", "im", "group", "mpim"}:
+                what_happened = f"message/{channel_type}"
             else:
-                logger.info("🚩 unknown channel_type %r" % slack_event["channel_type"])
+                logger.info("🚩 unknown channel_type %r", channel_type)
                 return None
         else:
-            logger.info("🚩 unknown type %r" % event_type)
+            logger.info("🚩 unknown type %r", event_type)
             return None
 
         t1 = time.time()
@@ -503,7 +533,7 @@ class IntegrationSlack:
             user_name = await self.get_user_name(web_api_client, user_id)
             text = text.replace(f'<@{user_id}>', f'@{user_name}')
             mention_looked_up[user_id] = user_name
-        
+
         file_contents = []
         files = slack_event.get('files', [])
         image_count = 0
@@ -522,13 +552,13 @@ class IntegrationSlack:
                     else:
                         text_files.append(f"[Binary file: {filename} ({len(file_bytes)} bytes)]")
             except Exception as e:
-                logger.error(f"Error processing file {file_info.get('name', 'unknown')}: {e}")
+                logger.exception(f"Error processing file {file_info.get('name', 'unknown')}")
                 text_files.append(f"[File processing error: {file_info.get('name', 'unknown')}]")
-        
+
         if text_files:
             combined_text = "\n📎 Files:\n" + "\n".join(text_files)
             file_contents.append({"m_type": "text", "m_content": combined_text})
-        
+
         t3 = time.time()
         logger.info("slack activity timing %0.3fs %0.3fs %0.3fs" % (t1 - t0, t2 - t1, t3 - t2))
 
@@ -565,7 +595,7 @@ class IntegrationSlack:
 
         if captured_thread is not None:
             http = await self.fclient.use_http()
-            
+
             content = [{"m_type": "text", "m_content": f"👤{a.message_author_name}\n\n{a.message_text}"}]
             if a.file_contents:
                 content.extend(a.file_contents)
@@ -574,7 +604,7 @@ class IntegrationSlack:
                 image_parts = [c for c in content if c.get('m_type', '').startswith('image/')][:2]
                 combined_text = "\n\n".join(p['m_content'] for p in text_parts)
                 content = [{"m_type": "text", "m_content": combined_text}] + image_parts
-            
+
             logger.info("Captured slack->db ft_id=%s ft_app_searchable=%s sending=%d parts" % (captured_thread.thread_fields.ft_id, expected_app_seachable, len(content)))
             user_pref = json.dumps({"reopen_task_instruction": 1})
             try:
@@ -635,10 +665,10 @@ class IntegrationSlack:
                 )
             logger.info(f"Successfully posted assistant message to channel {something_id!r} thread_ts {thread_ts!r}")
         except SlackApiError as e:
-            logger.error(f"Failed to post message to channel {something_id!r} thread_ts {thread_ts!r}: {e}")
+            logger.exception(f"Failed to post message to channel {something_id!r} thread_ts {thread_ts!r}")
             return False
         except Exception as e:
-            logger.error(f"Unexpected error posting message to Slack: {type(e).__name__}: {e}", exc_info=True)
+            logger.exception("Unexpected error posting message to Slack")
             return False
 
         http = await self.fclient.use_http()
@@ -680,7 +710,7 @@ class IntegrationSlack:
             image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
             return {"m_type": "image/jpeg", "m_content": image_base64}
         except Exception as e:
-            logger.error(f"Failed to process image: {e}")
+            logger.exception("Failed to process image")
             return {"m_type": "text", "m_content": f"[Image processing failed: {e}]"}
 
     async def process_slack_text_file(self, file_bytes: bytes, filename: str) -> dict:
@@ -697,7 +727,7 @@ class IntegrationSlack:
         if not url:
             logger.warning(f"No download URL for file: {file_info.get('name', 'unknown')}")
             return None, None
-        
+
         headers = {'Authorization': f'Bearer {self.SLACK_BOT_TOKEN}'}
         try:
             async with httpx.AsyncClient() as client:
@@ -708,7 +738,7 @@ class IntegrationSlack:
                     logger.error(f"Failed to download file, status: {response.status_code}")
                     return None, None
         except Exception as e:
-            logger.error(f"Error downloading file from Slack: {e}")
+            logger.exception("Error downloading file from Slack")
             return None, None
 
     # - - other stuff like joining the right channels - -
@@ -745,7 +775,7 @@ class IntegrationSlack:
                     logger.info("ratelimit")
                     await asyncio.sleep(10)
                     continue
-                logger.error(f"Slack API error in get_history: {e}")
+                logger.exception("Slack API error in get_history")
                 raise
 
             for msg in messages_response["messages"]:
@@ -773,7 +803,7 @@ class IntegrationSlack:
                     self.users_name2id[user_name] = user_id
                     logger.info(f"👤 User {user_name} -> {user_id}")
         except SlackApiError as e:
-            logger.error(f"Failed to list users: {type(e).__name__} {e}")
+            logger.exception("Failed to list users")
             self.problems_other.append(f"Failed to list users: {type(e).__name__} {e}")
 
         try:
@@ -792,7 +822,7 @@ class IntegrationSlack:
                 else:
                     logger.error(f"User {user_id} not found in users_id2name, cannot map DM channel {dm_channel_id}")
         except SlackApiError as e:
-            logger.error(f"Failed to list DMs: {type(e).__name__} {e}")
+            logger.exception("Failed to list DMs")
             self.problems_other.append(f"Failed to list DMs: {type(e).__name__} {e}")
 
         try:
@@ -824,7 +854,7 @@ class IntegrationSlack:
                     except SlackApiError as e:
                         self.problems_joining.append("%s %s" % (type(e).__name__, e))
         except SlackApiError as e:
-            logger.error(f"Failed to list channels: {type(e).__name__} {e}")
+            logger.exception("Failed to list channels")
             self.problems_other.append(f"Failed to list channels: {type(e).__name__} {e}")
 
         # async for msg in self.get_history(web_api_client, channel["id"], long_ago):
