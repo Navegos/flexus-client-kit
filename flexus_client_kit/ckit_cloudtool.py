@@ -164,6 +164,7 @@ async def i_am_still_alive(
             if await ckit_shutdown.wait(60):
                 break
 
+
 async def run_cloudtool_service_real(
     service_name: str,
     endpoint,
@@ -173,11 +174,9 @@ async def run_cloudtool_service_real(
     fgroup_id: Optional[str],
     fuser_id: Optional[str],
     shared: bool,
-    use_ws_ticket: bool,
 ) -> None:
     client = ckit_client.FlexusClient(
         service_name,
-        use_ws_ticket=use_ws_ticket,
         endpoint=endpoint,
     )
 
@@ -260,7 +259,6 @@ async def run_cloudtool_service(
     fgroup_id: Optional[str] = None,
     fuser_id: Optional[str] = None,
     shared: bool = True,
-    use_ws_ticket: bool = False,
 ) -> None:
     while not ckit_shutdown.shutdown_event.is_set():
         try:
@@ -273,7 +271,6 @@ async def run_cloudtool_service(
                 fgroup_id,
                 fuser_id,
                 shared,
-                use_ws_ticket,
             )
 
         except (websockets.exceptions.ConnectionClosedError, gql.transport.exceptions.TransportError, OSError):

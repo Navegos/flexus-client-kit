@@ -32,10 +32,11 @@ class FlexusClient:
         base_url: Optional[str] = None,   # "http://localhost:8008" if you have local flexus deployment
         endpoint: str = "/v1/graphql",
         skip_logger_init: bool = False,
+        superuser: bool = False,
     ):
         if not skip_logger_init:
             ckit_logs.setup_logger()
-        self.api_key = api_key or os.getenv("FLEXUS_API_KEY")
+        self.api_key = (api_key or os.getenv("FLEXUS_API_KEY")) if not superuser else None
         self.use_ws_ticket = os.getenv("FLEXUS_WS_TICKET") is not None
         self.base_url_http = base_url or os.getenv("FLEXUS_API_BASEURL", FLEXUS_API_BASEURL_DEFAULT)
         self.base_url_ws = self.base_url_http.replace("https://", "wss://").replace("http://", "ws://")
