@@ -48,12 +48,12 @@ async def main():
         print(f"Error: {args.dir} is not a valid directory")
         exit(1)
 
-    png_files = [f for f in os.listdir(args.dir) if f.endswith('.png') and not f.startswith('avatar-')]
+    png_files = [f for f in os.listdir(args.dir) if (f.endswith('.png') or f.endswith('.webp')) and not f.startswith('avatar-')]
     if not png_files:
-        print(f"No PNG files found in {args.dir}")
+        print(f"No PNG/WEBP files found in {args.dir}")
         exit(1)
 
-    print(f"Found {len(png_files)} PNG files to process")
+    print(f"Found {len(png_files)} PNG/WEBP files to process")
 
     tasks = [process_file(png_file, args.dir) for png_file in png_files]
     await asyncio.gather(*tasks, return_exceptions=True)
