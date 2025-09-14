@@ -12,19 +12,19 @@ logger = logging.getLogger("mongo_store")
 
 MONGO_STORE_TOOL = ckit_cloudtool.CloudTool(
     name="mongo_store",
-    description="Store and retrieve files in MongoDB, call with op=\"help\" for usage",
+    description="Store and retrieve files in MongoDB, call with op=help for usage",
     parameters={
         "type": "object",
         "properties": {
             "op": {
                 "type": "string",
-                "description": "Operation to perform: 'upload', 'download', 'list', 'cat', 'delete', or 'help'"
+                "description": "upload, download, list, cat, delete or help"
             },
             "args": {
                 "type": "object",
-                "description": "Operation-specific arguments. For 'upload'/'download'/'delete'/'cat': requires 'path'. "
-                               "For 'list': optional 'path' for prefix filtering. "
-                               "For 'cat': optional 'safety_valve' (e.g., '50k') for large file truncation"
+                "description": "Operations upload, download, delete, cat require 'path'. "
+                               "Operation 'list' uses optional 'path' for prefix filtering. "
+                               "Operation 'cat' has optional 'safety_valve' in bytes to prevent a large file from clogging context. Use op=help for details."
             },
         },
         "required": ["op", "args"],
@@ -44,7 +44,7 @@ mongo_store(op="list", args={"path": "folder1/"})
     Lists files in MongoDB with the given prefix.
 
 mongo_store(op="cat", args={"path": "folder1/something_20250803.json", "safety_valve": "50k"})
-    Open the file and print what's inside. The safety_valve parameter (default 50k) prevents 
+    Open the file and print what's inside. The safety_valve parameter (default 50k) prevents
     large files from clogging your context window.
 
 mongo_store(op="delete", args={"path": "folder1/something_20250803.json"})

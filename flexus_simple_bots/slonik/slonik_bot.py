@@ -37,7 +37,7 @@ async def slonik_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec
     mydb = mongo[dbname]
     personal_mongo = mydb["personal_mongo"]
 
-    postgres = fi_postgres.IntegrationPostgres()
+    postgres = fi_postgres.IntegrationPostgres(personal_mongo)
 
     @rcx.on_updated_message
     async def updated_message_in_db(msg: ckit_ask_model.FThreadMessageOutput):

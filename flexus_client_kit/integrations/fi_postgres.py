@@ -1,8 +1,10 @@
 import asyncio
 import logging
-from typing import Dict, Any
+import time
+from typing import Dict, Any, Optional
+from pymongo.collection import Collection
 
-from flexus_client_kit import ckit_cloudtool
+from flexus_client_kit import ckit_cloudtool, ckit_mongo
 
 logger = logging.getLogger("fi_postgres")
 
@@ -24,9 +26,13 @@ POSTGRES_TOOL = ckit_cloudtool.CloudTool(
 
 
 class IntegrationPostgres:
+    def __init__(self, personal_mongo: Optional[Collection] = None, save_to_mongodb_threshold_bytes: int = 100):
+        self.personal_mongo = personal_mongo
+        self.save_to_mongodb_threshold_bytes = save_to_mongodb_threshold_bytes
+
     async def execute_query(self, query: str) -> str:
         try:
-            cmd = ["psql", "-c", query]
+            cmd = ["psql", "--csv", "-c", query]
             logger.info("Running %s", query[:30])   # Maybe there is user data so we cut it short
 
             proc = await asyncio.create_subprocess_exec(
@@ -42,7 +48,29 @@ class IntegrationPostgres:
                 return f"{error_msg}"
 
             result = stdout.decode('utf-8', errors='replace').strip()
-            return result if result else "Query executed successfully"
+            if not result:
+                return "Query executed successfully"
+
+            result_bytes = result.encode('utf-8')
+            lines = result.split('\n')
+            row_count = len(lines) - 1
+
+            if len(result_bytes) > self.save_to_mongodb_threshold_bytes and self.personal_mongo is not None and len(lines) > 7:
+                timestamp = str(int(time.time()))
+                file_path = f"postgres/query_{timestamp}.csv"
+                await ckit_mongo.store_file(self.personal_mongo, file_path, result_bytes)
+
+                header_and_first_3 = '\n'.join(lines[:4])
+                last_3 = '\n'.join(lines[-3:])
+
+                preview = header_and_first_3 +  "\n...\n" + last_3
+
+                explanation  = "Query executed successfully, in the preview below the first line is CSV headers, then first 3 lines, dot dot dot, and last 3 lines of data. There are %d lines of data total.\n" % (row_count,)
+                explanation += "Full CSV is accessible via mongo_store() tool using path: %s\n\n" % (file_path,)
+                return explanation + preview
+
+            explanation = "Query executed successfully, first line is CSV headers, then %d lines of data, %d lines total:\n\n" % (row_count, row_count+1)
+            return explanation + result
 
         except FileNotFoundError:
             return "Error: this integration relies on psql command line utility and it doesn't work"
