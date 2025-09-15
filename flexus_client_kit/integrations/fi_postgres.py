@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 import time
 from typing import Dict, Any, Optional
 from pymongo.collection import Collection
@@ -24,14 +25,35 @@ POSTGRES_TOOL = ckit_cloudtool.CloudTool(
     },
 )
 
+_STRIP_SQL_LITERALS = re.compile(r"""
+    ('(?:''|[^'])*')                             |  # single-quoted strings
+    ("(?:""|[^"])*")                             |  # double-quoted identifiers/strings
+    (\$([A-Za-z_][A-Za-z_0-9]*)?\$.*?\$\4?\$)    |  # $tag$...$tag$ or $$...$$
+    (--[^\n]*)                                   |  # line comments
+    (/\*.*?\*/)                                     # block comments (non-nesting)
+""", re.IGNORECASE | re.DOTALL | re.VERBOSE)
+
+_WRITE_VERBS = re.compile(r"\b(?:INSERT|UPDATE|DELETE)\b", re.IGNORECASE)
+
+def _is_write_sql(query: str) -> bool:
+    cleaned = _STRIP_SQL_LITERALS.sub(" ", query)
+    return bool(_WRITE_VERBS.search(cleaned))
+
 
 class IntegrationPostgres:
     def __init__(self, personal_mongo: Optional[Collection] = None, save_to_mongodb_threshold_bytes: int = 100):
         self.personal_mongo = personal_mongo
         self.save_to_mongodb_threshold_bytes = save_to_mongodb_threshold_bytes
 
-    async def execute_query(self, query: str) -> str:
+    async def execute_query(self, query: str, have_human_confirmation: bool) -> str:
+        if _is_write_sql(query) and not have_human_confirmation:
+            raise ckit_cloudtool.NeedsConfirmation(
+                confirm_setup_key="",
+                confirm_command=query,
+                confirm_explanation="Write operation, human confirmation needed.",
+            )
         try:
+            # psql -c "SET default_transaction_read_only = on;" -c "INSERT INTO hello_world (a, b) VALUES (1, 2);"
             cmd = ["psql", "--csv", "-c", query]
             logger.info("Running %s", query[:30])   # Maybe there is user data so we cut it short
 
@@ -83,16 +105,41 @@ class IntegrationPostgres:
         self,
         toolcall: ckit_cloudtool.FCloudtoolCall,
         model_produced_args: Dict[str, Any],
+        have_human_confirmation: bool,
     ) -> str:
         query = model_produced_args.get("query")
         if not query:
             return "Error: specify `query` parameter"
-        return await self.execute_query(query)
+        return await self.execute_query(query, have_human_confirmation)
 
 
 if __name__ == "__main__":
+    def regexp_test():
+        read_only = """
+        SELECT * FROM hello_world WHERE a IN (SELECT a FROM u);
+        WITH s AS (SELECT 1) SELECT * FROM s;
+        EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM hello_world;
+        """
+        read_write = """
+        INSERT INTO hello_world SELECT * FROM u;
+        WITH i AS (INSERT INTO hello_world (a, b) VALUES (1, 2) RETURNING *) SELECT * FROM i;
+        UPDATE hello_world SET a = a + 1 WHERE a IN (SELECT a FROM u);
+        DELETE FROM hello_world USING u WHERE hello_world.a = u.a;
+        INSERT INTO hello_world (a, b) VALUES (1, 2) ON CONFLICT (a) DO UPDATE SET b = EXCLUDED.b;
+        """
+        for ro in read_only.split("\n"):
+            assert not _is_write_sql(ro), f"Should be read-only: {ro}"
+            assert not _is_write_sql(ro.strip()), f"Should be read-only: {ro.strip()}"
+        for rw in read_write.split("\n"):
+            if not rw.strip():
+                continue
+            assert _is_write_sql(rw), f"Should be write: {rw}"
+            assert _is_write_sql(rw.strip()), f"Should be write: {rw.strip()}"
+
     async def test():
+        regexp_test()
         postgres = IntegrationPostgres()
-        result = await postgres.execute_query("SELECT 2*2;")
+        result = await postgres.execute_query("SELECT 2*2;", have_human_confirmation=False)
         print("Test result:", result)
+
     asyncio.run(test())

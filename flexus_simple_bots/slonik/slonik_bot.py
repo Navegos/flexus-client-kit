@@ -29,7 +29,7 @@ TOOLS = [
 
 
 async def slonik_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.RobotContext) -> None:
-    setup = ckit_bot_exec.official_setup_mixing_procedure(slonik_install.slonik_setup_default, rcx.persona.persona_setup)
+    setup = ckit_bot_exec.official_setup_mixing_procedure(slonik_install.slonik_setup_schema, rcx.persona.persona_setup)
 
     mongo_conn_str = await ckit_mongo.get_mongodb_creds(fclient, rcx.persona.persona_id)
     mongo = AsyncMongoClient(mongo_conn_str)
@@ -49,7 +49,8 @@ async def slonik_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec
 
     @rcx.on_tool_call(fi_postgres.POSTGRES_TOOL.name)
     async def toolcall_postgres(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
-        return await postgres.called_by_model(toolcall, model_produced_args)
+        have_human_confirmation = False
+        return await postgres.called_by_model(toolcall, model_produced_args, have_human_confirmation)
 
     @rcx.on_tool_call(fi_mongo_store.MONGO_STORE_TOOL.name)
     async def toolcall_mongo_store(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:

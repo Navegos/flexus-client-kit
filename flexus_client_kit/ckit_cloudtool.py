@@ -18,6 +18,18 @@ from flexus_client_kit import gql_utils
 logger = logging.getLogger("ctool")
 
 
+class NeedsConfirmation(Exception):
+    def __init__(self,
+        confirm_setup_key: str,
+        confirm_command: str,
+        confirm_explanation: str,
+    ):
+        self.confirm_setup_key = confirm_setup_key
+        self.confirm_command = confirm_command
+        self.confirm_explanation = confirm_explanation
+        super().__init__(f"Confirmation needed: {confirm_explanation}")
+
+
 @dataclass
 class FCloudtoolCall:
     caller_fuser_id: str
@@ -126,6 +138,38 @@ async def cloudtool_post_result(client: ckit_client.FlexusClient, c: FCloudtoolC
                     "ftm_provenance": prov,
                     "dollars": 0.0,
                 }
+            },
+        )
+
+
+async def cloudtool_confirmation_request(
+    client: ckit_client.FlexusClient,
+    fcall_id: str,
+    confirm_setup_key: str,
+    confirm_command: str,
+    confirm_explanation: str
+):
+    http_client = await client.use_http()
+    async with http_client as http:
+        await http.execute(
+            gql.gql("""mutation CloudtoolConfirmationRequest(
+                $fcall_id: String!,
+                $confirm_setup_key: String!,
+                $confirm_command: String!,
+                $confirm_explanation: String!
+            ) {
+                cloudtool_confirmation_request(
+                    fcall_id: $fcall_id,
+                    confirm_setup_key: $confirm_setup_key,
+                    confirm_command: $confirm_command,
+                    confirm_explanation: $confirm_explanation
+                )
+            }"""),
+            variable_values={
+                "fcall_id": fcall_id,
+                "confirm_setup_key": confirm_setup_key,
+                "confirm_command": confirm_command,
+                "confirm_explanation": confirm_explanation,
             },
         )
 

@@ -10,8 +10,16 @@ from flexus_client_kit import ckit_bot_install
 from flexus_simple_bots.slonik import slonik_bot, slonik_prompts
 
 
-slonik_setup_default = []
-
+slonik_setup_schema = [
+    {
+        "bs_name": "confirm_read",
+        "bs_type": "bool",
+        "bs_default": False,
+        "bs_group": "Confirmations",
+        "bs_order": 1,
+        "bs_description": "Tell the robot what issues should escalate to a human engineer",
+    },
+]
 
 async def install(client: ckit_client.FlexusClient, ws_id: str):
     bot_internal_tools = json.dumps([t.openai_style_tool() for t in slonik_bot.TOOLS])
@@ -33,7 +41,7 @@ async def install(client: ckit_client.FlexusClient, ws_id: str):
         marketable_typical_group="Admin Tools",
         marketable_github_repo="https://github.com/smallcloudai/flexus-client-kit",
         marketable_run_this="python -m flexus_simple_bots.slonik.slonik_bot",
-        marketable_setup_default=slonik_setup_default,
+        marketable_setup_default=slonik_setup_schema,
         marketable_preferred_model_default="grok-code-fast-1",
         marketable_daily_budget_default=50_000_000,
         marketable_default_inbox_default=5_000_000,
