@@ -209,17 +209,16 @@ class BotInstance(NamedTuple):
 
 async def crash_boom_bang(fclient: ckit_client.FlexusClient, rcx: RobotContext, bot_main_loop: Callable[[ckit_client.FlexusClient, RobotContext], Awaitable[None]]) -> None:
     logger.info("%s START name=%r" % (rcx.persona.persona_id, rcx.persona.persona_name))
-    try:
-        await bot_main_loop(fclient, rcx)
-
-    except asyncio.CancelledError:
-        pass
-
-    except Exception as e:
-        logger.error("Bot main loop: %s %s" % (type(e).__name__, e), exc_info=True)
-
-    finally:
-        logger.info("%s STOP" % rcx.persona.persona_id)
+    while not ckit_shutdown.shutdown_event.is_set():
+        try:
+            await bot_main_loop(fclient, rcx)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error("%s Bot main loop problem: %s %s", rcx.persona.persona_id, type(e).__name__, e, exc_info=True)
+        logger.info("%s will sleep 60 seconds and restart", rcx.persona.persona_id)
+        await ckit_shutdown.wait(60)
+    logger.info("%s STOP" % rcx.persona.persona_id)
 
 
 class BotsCollection:
