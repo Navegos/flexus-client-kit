@@ -197,30 +197,23 @@ async def bot_subchat_create_multiple(
     first_question: List[str],
     first_calls: List[str],
     title: List[str],
-    subchat_dest_ft_id: str,
-    subchat_dest_ftm_alt: int,
-    subchat_dest_ftm_num: int,
-    ft_subchat_dest_call_n: int,
+    fcall_id: str,
 ) -> None:
     assert re.match(r'^[a-z0-9_]+$', who_is_asking)
     camel_case_for_logs = "".join(word.capitalize() for word in who_is_asking.split("_"))
     http = await client.use_http()
     async with http as h:
         await h.execute(
-            gql.gql(f"""mutation {camel_case_for_logs}BotSubchatCreateMultiple($who_is_asking: String!, $persona_id: String!, $first_question: [String!]!, $first_calls: [String!]!, $title: [String!]!, $subchat_dest_ft_id: String!, $subchat_dest_ftm_alt: Int!, $subchat_dest_ftm_num: Int!, $ft_subchat_dest_call_n: Int!) {{
-                bot_subchat_create_multiple(who_is_asking: $who_is_asking, persona_id: $persona_id, first_question: $first_question, first_calls: $first_calls, title: $title, subchat_dest_ft_id: $subchat_dest_ft_id, subchat_dest_ftm_alt: $subchat_dest_ftm_alt, subchat_dest_ftm_num: $subchat_dest_ftm_num, ft_subchat_dest_call_n: $ft_subchat_dest_call_n)
+            gql.gql(f"""mutation {camel_case_for_logs}BotSubchatCreateMultiple($who_is_asking: String!, $persona_id: String!, $first_question: [String!]!, $first_calls: [String!]!, $title: [String!]!, $fcall_id: String!) {{
+                bot_subchat_create_multiple(who_is_asking: $who_is_asking, persona_id: $persona_id, first_question: $first_question, first_calls: $first_calls, title: $title, fcall_id: $fcall_id)
             }}"""),
             variable_values={
                 "who_is_asking": who_is_asking,
                 "persona_id": persona_id,
-                "activation_type": "subchat",
                 "first_question": first_question,
                 "first_calls": first_calls,
                 "title": title,
-                "subchat_dest_ft_id": subchat_dest_ft_id,
-                "subchat_dest_ftm_alt": subchat_dest_ftm_alt,
-                "subchat_dest_ftm_num": subchat_dest_ftm_num,
-                "ft_subchat_dest_call_n": ft_subchat_dest_call_n,
+                "fcall_id": fcall_id,
             },
         )
 

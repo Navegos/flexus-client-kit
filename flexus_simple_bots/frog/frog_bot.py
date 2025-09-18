@@ -109,10 +109,7 @@ async def frog_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.R
                 first_questions,
                 first_calls,
                 titles,
-                toolcall.fcall_ft_id,
-                toolcall.fcall_ftm_alt,
-                toolcall.fcall_called_ftm_num,
-                toolcall.fcall_call_n,
+                toolcall.fcall_id,
             )
             return "WAIT_SUBCHATS"
         else:

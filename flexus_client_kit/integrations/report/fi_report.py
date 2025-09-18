@@ -815,10 +815,7 @@ async def handle_process_report_tool(
         first_questions,
         first_calls,
         titles,
-        toolcall.fcall_ft_id,
-        toolcall.fcall_ftm_alt,
-        toolcall.fcall_called_ftm_num,
-        toolcall.fcall_call_n,
+        toolcall.fcall_id,
     )
 
     return "WAIT_SUBCHATS"
