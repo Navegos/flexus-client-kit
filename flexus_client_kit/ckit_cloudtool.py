@@ -42,6 +42,7 @@ class FCloudtoolCall:
     fcall_name: str
     fcall_arguments: str
     fcall_created_ts: float
+    fcall_untrusted_key: str
     connected_persona_id: str
     ws_id: str
     subgroups_list: List[str]
@@ -135,6 +136,7 @@ async def cloudtool_post_result(client: ckit_client.FlexusClient, c: FCloudtoolC
             variable_values={
                 "input": {
                     "fcall_id": c.fcall_id,
+                    "fcall_untrusted_key": c.fcall_untrusted_key,
                     "ftm_content": content,
                     "ftm_provenance": prov,
                     "dollars": 0.0,
@@ -254,7 +256,7 @@ async def run_cloudtool_service_real(
     def workset_done(task: asyncio.Task, call: FCloudtoolCall) -> None:
         workset.discard(task)
         if task.exception():
-            logger.error("task error %s", task.exception())
+            logger.error("cloudtool task error", exc_info=task.exception())
 
     still_alive = asyncio.create_task(i_am_still_alive(client, tools, fgroup_id, fuser_id, shared))
     still_alive.add_done_callback(lambda t: ckit_utils.report_crash(t, logger))
