@@ -248,7 +248,7 @@ async def run_cloudtool_service_real(
                 if badstat:
                     badstat = False
                 else:
-                    logger.info("idle %0.1f%% full %0.1f%%" % ((idle_sec * 100 / 60), (full_sec * 100 / 60)))
+                    logger.info("idle %0.1f%% full %0.1f%% now %d", (idle_sec * 100 / 60), (full_sec * 100 / 60), len(workset))
                 idle_sec = 0
                 full_sec = 0
                 minute = now_minute
