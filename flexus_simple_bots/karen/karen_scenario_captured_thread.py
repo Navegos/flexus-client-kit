@@ -62,7 +62,7 @@ async def scenario(setup: ckit_scenario_setup.ScenarioSetup, use_mcp: bool = Fal
 
     await post_fake_slack_message(f"support/{thread_ts}", "Is there rust SDK for it?")
     await wait_for_bot_message(f"support/{thread_ts}")
-    await post_fake_slack_message(f"support/{thread_ts}", "Give me example of how to invoke model in python to ask it a simple prompt and get result")
+    await post_fake_slack_message(f"support/{thread_ts}", "Give me an example of how to invoke model in python to ask it a simple prompt and get result")
     await wait_for_bot_message(f"support/{thread_ts}")
 
     slack_instance = fake_slack_instances[0]

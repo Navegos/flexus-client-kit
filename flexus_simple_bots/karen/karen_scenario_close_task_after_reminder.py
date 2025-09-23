@@ -81,6 +81,7 @@ async def scenario(setup: ckit_scenario_setup.ScenarioSetup) -> None:
     await send_reminder(setup, ft_id, "task123")
     await setup.wait_for_toolcall(messages_queue, "flexus_bot_kanban", ft_id, {"op": "current_task_done"})
 
+    # XXX needs_user both in wait_for_toolcall and here
     await asyncio.sleep(15) # give some time just in case bot spams after
 
     slack_thread_messages_after = [msg for msgs in slack_instance.messages.values() for msg in msgs if msg.get('thread_ts') == first_message['ts']]

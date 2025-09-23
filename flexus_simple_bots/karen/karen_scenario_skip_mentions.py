@@ -80,6 +80,8 @@ async def scenario(setup: ckit_scenario_setup.ScenarioSetup, use_mcp: bool = Fal
     bot_msgs_between = [msg for msg in between_messages if msg.get('user') == 'bot']
     assert not bot_msgs_between, f"Bot messages found between Bob and Alice: {bot_msgs_between}, should have been just skipped"
 
+    # XXX maybe assert list ["Bob", "Claire", "Alice", "Karen"]
+
 
 if __name__ == "__main__":
     setup = ckit_scenario_setup.ScenarioSetup("karen")
