@@ -659,7 +659,7 @@ class IntegrationSlack:
             return False
         match = re.match(r'^slack/([^/]+)(?:/(.+))?$', searchable)
         if not match:
-            logger.info("look_assistant_might_have_posted_something(): thread ft_app_searchable=%r doesn't look like a slack/channel/thread" % searchable)
+            # logger.info("look_assistant_might_have_posted_something(): thread ft_app_searchable=%r doesn't look like a slack/channel/thread" % searchable)
             return False
         something_id, thread_ts = match.groups()
 

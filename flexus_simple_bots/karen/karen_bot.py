@@ -94,6 +94,7 @@ async def karen_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.
             if a.attachments:
                 details['attachments'] = f"{len(a.attachments)} files attached"
 
+            logger.info("%s posting to kanban: title=%r details=%r", rcx.persona.persona_id, title, details)
             await ckit_kanban.bot_kanban_post_into_inbox(
                 fclient,
                 rcx.persona.persona_id,

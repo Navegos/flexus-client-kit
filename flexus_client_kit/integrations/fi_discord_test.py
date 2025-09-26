@@ -7,7 +7,7 @@ import discord
 import gql
 
 from flexus_client_kit import ckit_ask_model, ckit_bot_exec, ckit_scenario_setup, ckit_bot_query
-from flexus_client_kit.integrations.fi_discord3 import ActivityDiscord, IntegrationDiscord
+from flexus_client_kit.integrations.fi_discord2 import ActivityDiscord, IntegrationDiscord
 from flexus_simple_bots.karen import karen_bot
 
 
@@ -27,7 +27,6 @@ async def setup_discord(setup: ckit_scenario_setup.ScenarioSetup) -> tuple[Integ
         rcx.persona.persona_setup["DISCORD_BOT_TOKEN"],
         watch_channels=rcx.persona.persona_setup["discord_watch_channels"],
         mongo_collection=setup.mongo_collection,
-        filter_all_bots=False
     )
 
     intents = discord.Intents.default()
@@ -43,8 +42,11 @@ async def setup_discord(setup: ckit_scenario_setup.ScenarioSetup) -> tuple[Integ
     discord_bot.set_activity_callback(activity_callback)
     await discord_bot.start_reactive()
     await discord_bot.join_channels()
-    print(f"Discord bot joined channels: {discord_bot.channels_name2id}")
-    print(f"Actually joined: {discord_bot.actually_joined}")
+
+    # Wait for bot to be ready and populate channel cache
+    ready = await discord_bot._ensure_ready()
+    print(f"Discord bot ready: {ready}")
+    print(f"Discord bot channel mappings: {discord_bot.channel_name2id}")
 
     user_ready_event = asyncio.Event()
 
@@ -79,7 +81,7 @@ async def discord_channel_test(setup: ckit_scenario_setup.ScenarioSetup, discord
         queue.get_nowait()
 
     msg = f"channel_test_{time.time()}"
-    tests_channel_id = discord_bot.channels_name2id.get("tests")
+    tests_channel_id = discord_bot.channel_name2id.get("tests")
     print(f"tests channel id: {tests_channel_id}")
     assert tests_channel_id, "tests channel not found"
 
@@ -89,10 +91,13 @@ async def discord_channel_test(setup: ckit_scenario_setup.ScenarioSetup, discord
     activity, posted = await asyncio.wait_for(queue.get(), timeout=30)
     print(f"Received activity: {activity.message_text}, posted: {posted}")
     assert activity.message_text == msg and not posted
-    assert len(activity.attachments) >= 1, f"Expected attachments but got {len(activity.attachments)}"
-    content = activity.attachments[0]["m_content"]
-    assert "1.txt" in content and "This is test file 1" in content
-    assert "2.json" in content and '"content": "json test file"' in content
+    assert len(activity.attachments) >= 2, f"Expected 2 attachments but got {len(activity.attachments)}"
+
+    # Check that we have both files in the attachments
+    all_content = "\n".join(att["m_content"] for att in activity.attachments)
+    print(f"All attachment content: {all_content}")
+    assert "1.txt" in all_content and "This is test file 1" in all_content
+    assert "2.json" in all_content and '"content": "json test file"' in all_content
     print("✓ Channel test passed")
 
 
@@ -116,7 +121,7 @@ async def discord_capture_test(setup: ckit_scenario_setup.ScenarioSetup, discord
     while not queue.empty():
         queue.get_nowait()
 
-    tests_channel_id = discord_bot.channels_name2id.get("tests")
+    tests_channel_id = discord_bot.channel_name2id.get("tests")
     assert tests_channel_id, "tests channel not found"
     channel = user_client.get_channel(tests_channel_id)
 
@@ -127,8 +132,15 @@ async def discord_capture_test(setup: ckit_scenario_setup.ScenarioSetup, discord
     assert a1.message_text == msg and not p1
 
     thread = await channel.create_thread(name="test_thread", message=sent_message)
-    await thread.send("test message 1")
+
+    # Discord automatically sends the original message to the thread, consume that first
+    a_thread_creation, p_thread_creation = await asyncio.wait_for(queue.get(), timeout=30)
+    print(f"Thread creation activity: text='{a_thread_creation.message_text}', posted={p_thread_creation}")
+
+    thread_msg = await thread.send("test message 1")
+    print(f"Sent thread message: id={thread_msg.id}, content='{thread_msg.content}'")
     a_pre, p_pre = await asyncio.wait_for(queue.get(), timeout=30)
+    print(f"Thread message activity: text='{a_pre.message_text}', posted={p_pre}, channel_id={a_pre.channel_id}, thread_id={a_pre.thread_id}")
     assert a_pre.message_text == "test message 1" and not p_pre
 
     http = await discord_bot.fclient.use_http()
@@ -155,15 +167,17 @@ async def discord_capture_test(setup: ckit_scenario_setup.ScenarioSetup, discord
 
     discord_bot.rcx.latest_threads[ft_id] = ckit_bot_query.FThreadWithMessages(
         discord_bot.rcx.persona.persona_id,
-        setup.create_fake_fthread_output(ft_id, f"discord/thread/{thread.id}"), {}
+        setup.create_fake_fthread_output(ft_id, f"discord/{tests_channel_id}/{thread.id}"), {}
     )
 
     await thread.send("test message 2")
     a_after, p_after = await asyncio.wait_for(queue.get(), timeout=30)
     assert p_after and a_after.message_text == "test message 2"
 
+    # Test capturing the same thread again should return "already captured"
     tcall2 = setup.create_fake_toolcall_output("capture_call_2", ft_id, args)
     result2 = await discord_bot.called_by_model(toolcall=tcall2, model_produced_args=args)
+    print(f"Second capture attempt result: '{result2}'")
     assert "already captured" in result2.lower()
 
     content = "Test assistant response"

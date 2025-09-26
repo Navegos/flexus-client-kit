@@ -93,8 +93,8 @@ DISCORD_SETUP_SCHEMA = [
 @dataclass
 class ActivityDiscord:
     channel_name: str
-    channel_id: str
-    thread_id: Optional[str]
+    channel_id: int
+    thread_id: int  # 0 if no thread
     message_id: str
     message_text: str
     message_author_name: str
@@ -117,6 +117,9 @@ def _parse_channel_reference(ref: str) -> Tuple[Optional[str], Optional[str]]:
     if ref.startswith("@"):
         return ref, None
     channel, thread = ref.split("/", 1) if "/" in ref else (ref, None)
+    # Treat "/0" as no thread
+    if thread == "0":
+        thread = None
     return channel or None, thread or None
 
 
@@ -135,10 +138,10 @@ class IntegrationDiscord:
         self.mongo_collection = mongo_collection
         self.activity_callback: Optional[Callable[[ActivityDiscord, bool], Awaitable[None]]] = None
         self.prev_messages: deque[str] = deque(maxlen=200)
-        self.user_id2name: Dict[str, str] = {}
-        self.user_name2id: Dict[str, str] = {}
-        self.channel_id2name: Dict[str, str] = {}
-        self.channel_name2id: Dict[str, str] = {}
+        self.user_id2name: Dict[int, str] = {}
+        self.user_name2id: Dict[str, int] = {}
+        self.channel_id2name: Dict[int, str] = {}
+        self.channel_name2id: Dict[str, int] = {}
         self.problems_other: List[str] = []
         self.watch_channel_ids: set[str] = set()
         self.watch_channel_names: set[str] = set()
@@ -264,10 +267,14 @@ class IntegrationDiscord:
             destination = await self._resolve_destination(channel_ref)
             if destination.error:
                 return destination.error
-            identifier = destination.thread_identifier or destination.channel_identifier
+            if destination.thread_identifier:
+                identifier = f"{destination.channel_identifier}/{destination.thread_identifier}"
+                searchable = f"discord/{identifier}"
+            else:
+                identifier = str(destination.channel_identifier)
+                searchable = f"discord/{identifier}"
             if not identifier:
                 return "Cannot capture this location\n"
-            searchable = f"discord/{identifier}"
             already = self._thread_capturing(identifier)
             if already:
                 if already.thread_fields.ft_id == toolcall.fcall_ft_id:
@@ -325,8 +332,8 @@ class IntegrationDiscord:
         @dataclass
         class Destination:
             target: Optional[Messageable]
-            channel_identifier: Optional[str]
-            thread_identifier: Optional[str]
+            channel_identifier: Optional[int]
+            thread_identifier: Optional[int]
             display_name: str
             error: Optional[str]
 
@@ -340,19 +347,20 @@ class IntegrationDiscord:
             username = channel_token[1:]
             user_id = self.user_name2id.get(username.lower())
             if not user_id and username.isdigit():
-                user_id = username
+                user_id = int(username)
             if not user_id:
                 return Destination(None, None, None, "", f"Unknown Discord user {username!r}\n")
-            user = self.client.get_user(int(user_id)) if self.client else None
+            user = self.client.get_user(user_id) if self.client else None
             if not user and self.client:
                 try:
-                    user = await self.client.fetch_user(int(user_id))
+                    user = await self.client.fetch_user(user_id)
                 except DiscordException as e:
+                    logger.warning("%s Cannot fetch user %d: %s", self.rcx.persona.persona_id, user_id, e)
                     return Destination(None, None, None, "", f"Cannot fetch user: {e}\n")
             if not user:
                 return Destination(None, None, None, "", f"Cannot resolve user {username!r}\n")
             channel = user.dm_channel or await user.create_dm()
-            return Destination(channel, str(channel.id), None, user.display_name or user.name, None)
+            return Destination(channel, channel.id, 0, user.display_name or user.name, None)
 
         channel_obj: Optional[discord.abc.GuildChannel] = None
         if channel_token.isdigit() and self.client:
@@ -361,12 +369,13 @@ class IntegrationDiscord:
                 try:
                     channel_obj = await self.client.fetch_channel(int(channel_token))
                 except DiscordException as e:
+                    logger.warning("%s Cannot fetch channel %s: %s", self.rcx.persona.persona_id, channel_token, e)
                     return Destination(None, None, None, "", f"Cannot fetch channel: {e}\n")
         if not channel_obj and self.client:
             lookup = channel_token.lower()
             channel_id = self.channel_name2id.get(lookup)
             if channel_id:
-                channel_obj = self.client.get_channel(int(channel_id))
+                channel_obj = self.client.get_channel(channel_id)
         if not channel_obj:
             return Destination(None, None, None, "", f"Unknown Discord channel {channel_token!r}\n")
 
@@ -379,6 +388,7 @@ class IntegrationDiscord:
                     try:
                         thread_obj = await self.client.fetch_channel(int(thread_token))  # type: ignore[assignment]
                     except DiscordException as e:
+                        logger.warning("%s Cannot fetch thread %s: %s", self.rcx.persona.persona_id, thread_token, e)
                         return Destination(None, None, None, "", f"Cannot fetch thread: {e}\n")
             else:
                 thread_obj = None
@@ -387,16 +397,16 @@ class IntegrationDiscord:
             if not thread_obj:
                 return Destination(None, None, None, "", f"Unknown Discord thread {thread_token!r}\n")
             self._record_thread(thread_obj)
-            return Destination(thread_obj, str(thread_obj.parent_id or channel_obj.id), str(thread_obj.id), thread_obj.name, None)
+            return Destination(thread_obj, thread_obj.parent_id or channel_obj.id, thread_obj.id, thread_obj.name, None)
 
-        return Destination(channel_obj, str(channel_obj.id), None, channel_obj.name, None)
+        return Destination(channel_obj, channel_obj.id, 0, channel_obj.name, None)
 
     async def _send_message(self, destination, text: Optional[str], attach_path: Optional[str]) -> None:
         if not destination.target:
             raise RuntimeError("destination missing")
         files: List[File] = []
         if attach_path:
-            if not self.mongo_collection:
+            if self.mongo_collection is None:
                 raise RuntimeError("Mongo collection not configured for attachments")
             perr = validate_path(attach_path)
             if perr:
@@ -417,6 +427,7 @@ class IntegrationDiscord:
         try:
             await destination.target.send(content=text, files=files if files else None)
         except DiscordException as e:
+            logger.warning("%s Discord send to %s failed: %s", self.rcx.persona.persona_id, destination.display_name, e)
             raise RuntimeError(f"Discord error: {e}")
 
     async def _collect_recent_messages(self, destination) -> List[Dict[str, Any]]:
@@ -429,7 +440,7 @@ class IntegrationDiscord:
                     continue
                 history.append(message)
         except DiscordException:
-            logger.exception("Failed to read discord history")
+            logger.warning("%s Failed to read discord history from %s", self.rcx.persona.persona_id, destination.display_name)
             return []
 
         parts: List[Dict[str, Any]] = []
@@ -448,7 +459,7 @@ class IntegrationDiscord:
             try:
                 data = await attachment.read()
             except DiscordException:
-                logger.exception("Failed to download attachment")
+                logger.warning("%s Failed to download attachment %s", self.rcx.persona.persona_id, attachment.filename or "unknown")
                 continue
             if attachment.content_type and attachment.content_type.startswith("image/"):
                 image_part = self._process_image(data)
@@ -498,22 +509,43 @@ class IntegrationDiscord:
                 async for member in guild.fetch_members(limit=None):
                     self._record_user(member)
             except DiscordException:
+                logger.warning("%s Unable to prefetch all members for guild %s", self.rcx.persona.persona_id, guild.id)
                 logger.info("Unable to prefetch all members for guild %s", guild.id)
 
     def _record_channel(self, channel: discord.abc.GuildChannel) -> None:
-        self.channel_id2name[str(channel.id)] = getattr(channel, "name", str(channel.id))
+        self.channel_id2name[channel.id] = getattr(channel, "name", str(channel.id))
         if hasattr(channel, "name"):
-            self.channel_name2id[channel.name.lower()] = str(channel.id)
+            self.channel_name2id[channel.name.lower()] = channel.id
 
     def _record_thread(self, thread: discord.Thread) -> None:
-        self.channel_id2name[str(thread.id)] = thread.name
-        self.channel_name2id[thread.name.lower()] = str(thread.id)
+        self.channel_id2name[thread.id] = thread.name
+        self.channel_name2id[thread.name.lower()] = thread.id
 
     def _record_user(self, member: discord.abc.User) -> str:
         display = member.display_name if hasattr(member, "display_name") else member.name
-        self.user_id2name[str(member.id)] = display
-        self.user_name2id[display.lower()] = str(member.id)
+        self.user_id2name[member.id] = display
+        self.user_name2id[display.lower()] = member.id
         return display
+
+    async def _get_channel_name(self, channel_id: int) -> str:
+        if channel_id in self.channel_id2name:
+            return self.channel_id2name[channel_id]
+
+        if self.client:
+            channel = self.client.get_channel(channel_id)
+            if not channel:
+                try:
+                    channel = await self.client.fetch_channel(channel_id)
+                except DiscordException:
+                    logger.warning("%s Cannot fetch channel name for id %d", self.rcx.persona.persona_id, channel_id)
+                    logger.info("Cannot fetch channel name for id %d", channel_id)
+                    return str(channel_id)
+
+            if channel:
+                self._record_channel(channel)
+                return self.channel_id2name[channel_id]
+
+        return str(channel_id)
 
     async def _handle_incoming_message(self, message: discord.Message) -> None:
         if not self.client:
@@ -528,9 +560,9 @@ class IntegrationDiscord:
             return
 
         if self.watch_channel_ids or self.watch_channel_names:
-            channel_name = self.channel_id2name.get(channel_identifier, "")
+            channel_name = await self._get_channel_name(channel_identifier)
             if (
-                channel_identifier not in self.watch_channel_ids
+                str(channel_identifier) not in self.watch_channel_ids
                 and channel_name.lower() not in self.watch_channel_names
             ):
                 return
@@ -544,7 +576,7 @@ class IntegrationDiscord:
         attachments = await self._extract_attachments(message)
 
         activity = ActivityDiscord(
-            channel_name=self.channel_id2name.get(channel_identifier, channel_identifier),
+            channel_name=await self._get_channel_name(channel_identifier),
             channel_id=channel_identifier,
             thread_id=thread_identifier,
             message_id=str(message.id),
@@ -557,19 +589,19 @@ class IntegrationDiscord:
         if self.activity_callback:
             await self.activity_callback(activity, posted)
 
-    def _identify_message_location(self, message: discord.Message) -> Tuple[Optional[str], Optional[str]]:
+    def _identify_message_location(self, message: discord.Message) -> Tuple[Optional[int], int]:
         if isinstance(message.channel, discord.Thread):
             self._record_thread(message.channel)
-            return str(message.channel.parent_id or message.channel.id), str(message.channel.id)
+            return message.channel.parent_id, message.channel.id
         if isinstance(message.channel, discord.DMChannel):
-            return str(message.channel.id), None
+            return message.channel.id, 0
         if hasattr(message.channel, "id"):
             self._record_channel(message.channel)
-            return str(message.channel.id), None
-        return None, None
+            return message.channel.id, 0
+        return None, 0
 
     async def post_into_captured_thread_as_user(self, activity: ActivityDiscord) -> bool:
-        identifier = activity.channel_id
+        identifier = str(activity.channel_id)
         if activity.thread_id:
             identifier += f"/{activity.thread_id}"
         thread_capturing = self._thread_capturing(identifier)
@@ -619,7 +651,9 @@ class IntegrationDiscord:
         if not searchable.startswith("discord/"):
             return False
         identifier = searchable[len("discord/") :]
-        channel_id, thread_id = identifier.split("/", 1) if "/" in identifier else (identifier, None)
+        channel_id_str, thread_id_str = identifier.split("/", 1) if "/" in identifier else (identifier, None)
+        channel_id = int(channel_id_str)
+        thread_id = int(thread_id_str) if thread_id_str else None
 
         await self._ensure_ready()
         if not self.client:
@@ -627,20 +661,20 @@ class IntegrationDiscord:
 
         target = None
         if thread_id:
-            target = self.client.get_channel(int(thread_id))
+            target = self.client.get_channel(thread_id)
             if not target:
                 try:
-                    target = await self.client.fetch_channel(int(thread_id))
+                    target = await self.client.fetch_channel(thread_id)
                 except DiscordException:
-                    logger.exception("Cannot fetch discord thread %s", thread_id)
+                    logger.warning("%s Cannot fetch discord thread %d", self.rcx.persona.persona_id, thread_id)
                     return False
         else:
-            target = self.client.get_channel(int(channel_id))
+            target = self.client.get_channel(channel_id)
             if not target:
                 try:
-                    target = await self.client.fetch_channel(int(channel_id))
+                    target = await self.client.fetch_channel(channel_id)
                 except DiscordException:
-                    logger.exception("Cannot fetch discord channel %s", channel_id)
+                    logger.warning("%s Cannot fetch discord channel %d", self.rcx.persona.persona_id, channel_id)
                     return False
         if not target:
             return False
@@ -652,7 +686,8 @@ class IntegrationDiscord:
         try:
             await target.send(text)
         except DiscordException:
-            logger.exception("Failed to post assistant message to Discord")
+            target_id = thread_id if thread_id else channel_id
+            logger.warning("%s Failed to post assistant message to channel/thread %d", self.rcx.persona.persona_id, target_id)
             return False
 
         http = await self.fclient.use_http()
