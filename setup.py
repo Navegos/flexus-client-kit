@@ -13,6 +13,7 @@ setup(
         "pymongo",
         "requests",
         "slack_bolt",
+        "discord",
         "python-dotenv",
         "jinja2",
         "Pillow",
@@ -20,13 +21,6 @@ setup(
         "pymongo",
     ],
     extras_require={
-        "discord": [
-            "discord.py",
-        ],
-        "slack": [
-            "slack-bolt",
-            "slack-sdk",
-        ],
         "dev": [
             "pytest",
             "pytest-asyncio",
