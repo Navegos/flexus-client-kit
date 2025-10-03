@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import time
+import argparse
 from typing import Dict, List, Optional, Any, Callable, Awaitable, NamedTuple, Union
 
 import gql
@@ -413,3 +414,10 @@ async def run_bots_in_this_group(
     await ckit_service_exec.run_typical_single_subscription_with_restart_on_network_errors(fclient, subscribe_and_produce_callbacks, bc)
     await shutdown_bots(bc)
     logger.info("run_bots_in_this_group exit")
+
+
+def parse_bot_group_argument():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--group", type=str, required=True, help="Flexus group ID where the bot will run, take it from the address bar in the browser when you are looking on something inside a group.")
+    args = parser.parse_args()
+    return args.group

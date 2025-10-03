@@ -74,17 +74,14 @@ async def slonik_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec
 
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(epilog="Use FLEXUS_API_KEY and FLEXUS_API_BASEURL environment variables to control how the bot connects")
-    parser.add_argument("--group", type=str, required=True, help="Flexus group ID where the bot will run")
-    args = parser.parse_args()
-    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT, args.group), endpoint="/v1/jailed-bot")
+    group = ckit_bot_exec.parse_bot_group_argument()
+    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT, group), endpoint="/v1/jailed-bot")
 
     asyncio.run(ckit_bot_exec.run_bots_in_this_group(
         fclient,
         marketable_name=BOT_NAME,
         marketable_version=BOT_VERSION_INT,
-        fgroup_id=args.group,
+        fgroup_id=group,
         bot_main_loop=slonik_main_loop,
         inprocess_tools=TOOLS,
     ))
