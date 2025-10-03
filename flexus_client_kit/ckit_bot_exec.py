@@ -185,6 +185,40 @@ async def crash_boom_bang(fclient: ckit_client.FlexusClient, rcx: RobotContext, 
     logger.info("%s STOP" % rcx.persona.persona_id)
 
 
+async def i_am_still_alive(
+    fclient: ckit_client.FlexusClient,
+    marketable_name: str,
+    marketable_version: int,
+    fgroup_id: str,
+) -> None:
+    while not ckit_shutdown.shutdown_event.is_set():
+        try:
+            http_client = await fclient.use_http()
+            async with http_client as http:
+                await http.execute(
+                    gql.gql("""mutation BotConfirmExists($marketable_name: String!, $marketable_version: Int!, $fgroup_id: String) {
+                        bot_confirm_exists(marketable_name: $marketable_name, marketable_version: $marketable_version, fgroup_id: $fgroup_id)
+                    }"""),
+                    variable_values={
+                        "marketable_name": marketable_name,
+                        "marketable_version": marketable_version,
+                        "fgroup_id": fgroup_id,
+                    },
+                )
+                logger.info("i_am_still_alive %s:%d group=%s", marketable_name, marketable_version, fgroup_id)
+            if await ckit_shutdown.wait(120):
+                break
+
+        except (
+            gql.transport.exceptions.TransportError,
+            OSError,
+            asyncio.exceptions.TimeoutError
+        ) as e:
+            logger.info("i_am_still_alive connection problem")
+            if await ckit_shutdown.wait(60):
+                break
+
+
 class BotsCollection:
     def __init__(
         self,
@@ -390,7 +424,6 @@ async def shutdown_bots(
         for bot in still_running:
             bot.atask.cancel()
         await asyncio.gather(*[bot.atask for bot in still_running], return_exceptions=True)
-
     logger.info("shutdown_bots success")
 
 
@@ -410,9 +443,14 @@ async def run_bots_in_this_group(
         inprocess_tools=inprocess_tools,
         bot_main_loop=bot_main_loop,
     )
-
-    await ckit_service_exec.run_typical_single_subscription_with_restart_on_network_errors(fclient, subscribe_and_produce_callbacks, bc)
-    await shutdown_bots(bc)
+    keepalive_task = asyncio.create_task(i_am_still_alive(fclient, marketable_name, marketable_version, fgroup_id))
+    keepalive_task.add_done_callback(lambda t: ckit_utils.report_crash(t, logger))
+    try:
+        await ckit_service_exec.run_typical_single_subscription_with_restart_on_network_errors(fclient, subscribe_and_produce_callbacks, bc)
+    finally:
+        keepalive_task.cancel()
+        await asyncio.gather(keepalive_task, return_exceptions=True)
+        await shutdown_bots(bc)
     logger.info("run_bots_in_this_group exit")
 
 

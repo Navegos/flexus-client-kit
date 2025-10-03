@@ -206,7 +206,11 @@ async def i_am_still_alive(
             if await ckit_shutdown.wait(120):
                 break
 
-        except gql.transport.exceptions.TransportQueryError:
+        except (
+            gql.transport.exceptions.TransportError,
+            OSError,
+            asyncio.exceptions.TimeoutError
+        ) as e:
             logger.info("i_am_still_alive connection problem")
             if await ckit_shutdown.wait(60):
                 break
