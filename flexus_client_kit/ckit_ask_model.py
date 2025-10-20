@@ -8,7 +8,7 @@ from typing import Optional, Any, List, Callable, Union, Dict
 
 import gql
 
-from flexus_client_kit import ckit_expert, ckit_client, gql_utils, ckit_localtool
+from flexus_client_kit import ckit_expert, ckit_client
 
 
 def openai_style_cloudtools(cloudtools: List[ckit_expert.FCloudTool]):
@@ -76,17 +76,17 @@ async def ask_model(
     model: str,
     who_is_asking: str,
     question: str,
-    localtools: Optional[List[Callable]] = None,
-    cloudtools: Optional[List[ckit_expert.FCloudTool]] = None,
+    # localtools: Optional[List[Callable]] = None,
+    # cloudtools: Optional[List[ckit_expert.FCloudTool]] = None,
     on_behalf_of_fuser_id: Optional[str] = None,
 ) -> FThreadMessageOutput:
-    if localtools or cloudtools:
-        combined_toolset = []
-        if cloudtools:
-            combined_toolset.extend(openai_style_cloudtools(cloudtools))
-        if localtools:
-            combined_toolset.extend([ckit_localtool.openai_style_function_description(f) for f in localtools])
-        toolset = combined_toolset
+    # if localtools or cloudtools:
+    #     combined_toolset = []
+    #     if cloudtools:
+    #         combined_toolset.extend(openai_style_cloudtools(cloudtools))
+    #     if localtools:
+    #         combined_toolset.extend([ckit_localtool.openai_style_function_description(f) for f in localtools])
+    #     toolset = combined_toolset
 
     http = await client.use_http()
     async with http as h:
@@ -101,7 +101,7 @@ async def ask_model(
                     "ft_fexp_id": fexp_id,
                     "ft_persona_id": persona_id,
                     "ft_title": title,
-                    "ft_toolset": json.dumps(toolset),
+                    "ft_toolset": "null",
                     "ft_app_capture": "bot",  # XXX fix me service name or something
                 },
                 "u": on_behalf_of_fuser_id,

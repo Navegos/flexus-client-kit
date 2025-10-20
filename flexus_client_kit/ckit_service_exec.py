@@ -24,12 +24,16 @@ async def run_typical_single_subscription_with_restart_on_network_errors(fclient
             finally:
                 ckit_shutdown.take_away_ws_client(fclient.service_name)
 
-        except (websockets.exceptions.ConnectionClosedError,
-                OSError,
-                gql.transport.exceptions.TransportError,
-                asyncio.exceptions.TimeoutError,
+        except (
+            websockets.exceptions.ConnectionClosedError,
+            gql.transport.exceptions.TransportError,
+            OSError,
+            asyncio.exceptions.TimeoutError,
         ) as e:
             if ckit_shutdown.shutdown_event.is_set():
                 break
-            logger.info("got %s, sleep 60..." % (type(e).__name__,), exc_info=True)
+            if "403:" in str(e):
+                logger.error("That looks bad, my key doesn't work: %s", e)
+            else:
+                logger.info("got %s, sleep 60..." % (type(e).__name__,))
             await ckit_shutdown.wait(60)

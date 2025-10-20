@@ -214,7 +214,12 @@ async def i_am_still_alive(
             OSError,
             asyncio.exceptions.TimeoutError
         ) as e:
-            logger.info("i_am_still_alive connection problem")
+            if "403:" in str(e):
+                # It's gql.transport.exceptions.TransportQueryError with {'message': "403: Whoops your key didn't work (1).", ...}
+                # Unfortunately, no separate exception class for 403
+                logger.error("That looks bad, my key doesn't work: %s", e)
+            else:
+                logger.info("i_am_still_alive connection problem")
             if await ckit_shutdown.wait(60):
                 break
 

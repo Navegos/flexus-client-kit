@@ -22,7 +22,7 @@ async def process_file(input_file: str, input_dir: str):
         image=open(input_path, "rb"),
         prompt=prompt,
         n=N,
-        size="1024x1536",
+        size="1024x1024",
     )
 
     for i in range(N):
