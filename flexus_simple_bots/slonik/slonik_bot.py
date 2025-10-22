@@ -13,12 +13,13 @@ from flexus_client_kit import ckit_mongo
 from flexus_client_kit.integrations import fi_mongo_store
 from flexus_client_kit.integrations import fi_postgres
 from flexus_simple_bots.slonik import slonik_install
+from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
 
 logger = logging.getLogger("bot_slonik")
 
 
 BOT_NAME = "slonik"
-BOT_VERSION = "0.1.0"
+BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
 ACCENT_COLOR = "#336791"

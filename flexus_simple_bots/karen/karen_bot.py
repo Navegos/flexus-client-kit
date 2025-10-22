@@ -14,12 +14,13 @@ from flexus_client_kit.integrations import fi_slack
 from flexus_client_kit.integrations import fi_discord2
 from flexus_client_kit.integrations import fi_repo_file
 from flexus_simple_bots.karen import karen_install
+from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
 
 logger = logging.getLogger("bot_karen")
 
 
 BOT_NAME = "karen"
-BOT_VERSION = "0.2.0"
+BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
 TOOLS = [fi_slack.SLACK_TOOL, fi_discord2.DISCORD_TOOL, fi_repo_file.REPO_FILE_TOOL]
