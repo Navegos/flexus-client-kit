@@ -14,10 +14,7 @@ assert "TransportConnectionFailed" in dir(gql.transport.exceptions), "pip instal
 
 async def run_typical_single_subscription_with_restart_on_network_errors(fclient: ckit_client.FlexusClient, subscribe_and_do_something: Callable, *func_args, **func_kwargs):
     ckit_shutdown.setup_signals()
-    exception_attempts = 0
-    last_exception_time = None
-    exception_ttl = 300  # 5 minutes
-    max_attempts = 3
+    exception_times = []
 
     while not ckit_shutdown.shutdown_event.is_set():
         try:
@@ -39,20 +36,14 @@ async def run_typical_single_subscription_with_restart_on_network_errors(fclient
             if ckit_shutdown.shutdown_event.is_set():
                 break
 
-            current_time = time.time()
-
-            if last_exception_time and (current_time - last_exception_time) > exception_ttl:
-                exception_attempts = 0
-
-            exception_attempts += 1
-            last_exception_time = current_time
-
-            if exception_attempts >= max_attempts:
-                logger.error("Reached %d consecutive exceptions, exiting: %s", max_attempts, e)
+            n = time.time()
+            exception_times = [t for t in exception_times if n - t < 300] + [n]
+            if len(exception_times) >= 3:
+                logger.exception("3 exceptions in 5 min, exiting")
                 raise
 
             if "403:" in str(e):
                 logger.error("That looks bad, my key doesn't work: %s", e)
             else:
-                logger.info("got %s (attempt %d/%d), sleep 60..." % (type(e).__name__, exception_attempts, max_attempts))
+                logger.info("got %s (attempt %d/3), sleep 60...", type(e).__name__, len(exception_times))
             await ckit_shutdown.wait(60)
