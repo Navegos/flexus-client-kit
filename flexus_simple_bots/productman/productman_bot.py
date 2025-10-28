@@ -8,6 +8,7 @@ from flexus_client_kit import ckit_cloudtool
 from flexus_client_kit import ckit_bot_exec
 from flexus_client_kit import ckit_shutdown
 from flexus_client_kit import ckit_ask_model
+from flexus_client_kit.integrations import fi_pdoc
 from flexus_simple_bots.productman import productman_install
 from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
 
@@ -88,11 +89,14 @@ TOOLS = [
     HYPOTHESIS_FORMATTER_TOOL,
     PRIORITIZATION_SCORER_TOOL,
     EXPERIMENT_TEMPLATES_TOOL,
+    fi_pdoc.POLICY_DOCUMENT_TOOL,
 ]
 
 
 async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.RobotContext) -> None:
     setup = ckit_bot_exec.official_setup_mixing_procedure(productman_install.productman_setup_schema, rcx.persona.persona_setup)
+
+    pdoc_integration = fi_pdoc.IntegrationPdoc(fclient, rcx.persona.located_fgroup_id)
 
     @rcx.on_updated_message
     async def updated_message_in_db(msg: ckit_ask_model.FThreadMessageOutput):
@@ -222,6 +226,10 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             return json.dumps({exp_type: templates[exp_type]}, indent=2)
         else:
             return f"Unknown experiment type: {exp_type}"
+
+    @rcx.on_tool_call(fi_pdoc.POLICY_DOCUMENT_TOOL.name)
+    async def toolcall_pdoc(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        return await pdoc_integration.called_by_model(toolcall, model_produced_args)
 
     try:
         while not ckit_shutdown.shutdown_event.is_set():

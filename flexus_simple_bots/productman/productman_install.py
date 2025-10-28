@@ -113,7 +113,7 @@ async def install(
             fexp_allow_tools="",
             fexp_app_capture_tools=bot_internal_tools,
         ),
-        marketable_tags=["Product Management", "Research", "Hypothesis Testing"],
+        marketable_tags=["Product Management", "Hypothesis Testing"],
         marketable_picture_big_b64=pic_big,
         marketable_picture_small_b64=pic_small,
         marketable_schedule=[
