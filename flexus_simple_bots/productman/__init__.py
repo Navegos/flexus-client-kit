@@ -1,1 +1,1 @@
-# ProductMan - Hypothesis-driven Product Manager Bot
+# Productman - Hypothesis-driven Product Manager Bot

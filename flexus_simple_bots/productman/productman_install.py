@@ -6,79 +6,64 @@ from pathlib import Path
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
 
+from flexus_simple_bots import prompts_common
 from flexus_simple_bots.productman import productman_bot, productman_prompts
 
 
 BOT_DESCRIPTION = """
-## ProductMan - Hypothesis-Driven Product Manager
+## Productman - Stage0 Product Validation Coach
 
-A systematic product manager that helps you formulate, test, and iterate on product hypotheses using structured thinking.
+A systematic product validation coach that guides you through a 3-node process to validate product ideas using the Stage0 methodology.
 
 **Hypothesis Formula:**
-"My client wants to [DO SOMETHING] but currently cannot because [BLOCKER]. To test it I need [TEST METHOD] and success would be [SUCCESS CRITERIA]."
+"My client [WHO] wants [WHAT], but cannot [OBSTACLE], because [REASON]"
+
+**3-Node Workflow:**
+
+**Node 1: Problem Challenge & Hypothesis Generation**
+- Collect idea brief, problem statement, target audience profiles
+- Play "Guess The Business" game to challenge and sharpen hypotheses
+- Generate 3-10 structured problem hypotheses
+- Create prioritization criteria and personalized market research plan
+
+**Node 2: Market Research & Prioritization**
+- Guide desk research through personalized sources (industry reports, forums, trends)
+- Score hypotheses on 4 dimensions: impact, evidence, urgency, feasibility
+- Generate prioritized list with rationale and evidence links
+
+**Node 3: Solution Ideation & Experiment Design**
+- Design minimal viable solution (emphasize manual MVPs over building)
+- Create 2-4 experiment designs from templates (landing pages, surveys, interviews, concierge MVP)
+- Prepare handoff to Prof. Probe bot for survey automation (Nodes 4-7)
 
 **Key Features:**
-- **Structured Hypothesis Creation**: Guides you through formulating testable product hypotheses
-- **Variation Generation**: Creates multiple angles to test each hypothesis
-- **Policy Documents**: Maintains .pdoc files for all hypotheses, interviews, and experiments
-- **Weekly Reviews**: Automatically surfaces hypotheses to revisit and test
-- **Customer Research**: Documents customer interviews in structured format
-- **Experiment Tracking**: Tracks test results and learnings
+- **"Guess The Business" Game**: Interactive challenge to make hypotheses precise and unique
+- **Automated Scoring**: Calculate weighted priority scores across 4 dimensions
+- **Experiment Templates**: 5 pre-built templates (landing page, survey, interviews, concierge MVP, prototype)
+- **Structured Documentation**: All work saved as .pdoc JSON files (D01-D09)
+- **Seamless Handoff**: Integration with Prof. Probe for survey deployment and analysis
 
 **Perfect for:**
-- Product managers defining new features
 - Startups validating product-market fit
-- Teams practicing hypothesis-driven development
-- Research and customer discovery
+- Product managers exploring new features
+- Indie hackers testing ideas before building
+- Customer development and lean startup practitioners
 
-ProductMan keeps your product thinking organized and testable, turning ideas into actionable experiments.
+Productman structures product thinking, challenges assumptions, and creates a validated foundation before you write any code.
 """
 
 
 productman_setup_schema = [
     {
-        "bs_name": "weekly_review_day",
-        "bs_type": "string_short",
-        "bs_default": "Monday",
-        "bs_group": "Schedule",
+        "bs_name": "additional_instructions",
+        "bs_type": "string_multiline",
+        "bs_default": "",
+        "bs_group": "Customization",
         "bs_order": 1,
         "bs_importance": 0,
-        "bs_description": "Which day of the week to review hypotheses (Monday, Tuesday, etc.)",
-    },
-    {
-        "bs_name": "auto_generate_variations",
-        "bs_type": "bool",
-        "bs_default": True,
-        "bs_group": "Behavior",
-        "bs_order": 1,
-        "bs_importance": 0,
-        "bs_description": "Automatically generate hypothesis variations after creating original",
-    },
-    {
-        "bs_name": "num_variations_default",
-        "bs_type": "int",
-        "bs_default": 3,
-        "bs_group": "Behavior",
-        "bs_order": 2,
-        "bs_importance": 0,
-        "bs_description": "Default number of variations to generate (1-5)",
+        "bs_description": "Additional instructions or preferences for how Productman should behave (e.g., language preference, industry focus, intensity of challenging)",
     },
 ]
-
-
-PRODUCTMAN_SUBCHAT_LARK = f"""
-print("Generating hypothesis variation in subchat")
-subchat_result = "Variation generated"
-"""
-
-PRODUCTMAN_DEFAULT_LARK = f"""
-print("Processing %d messages" % len(messages))
-msg = messages[-1]
-if msg["role"] == "assistant":
-    assistant_text = str(msg.get("content", ""))
-    if "hypothesis" in assistant_text.lower():
-        print("Hypothesis discussion detected")
-"""
 
 
 async def install(
@@ -94,7 +79,7 @@ async def install(
         marketable_name=productman_bot.BOT_NAME,
         marketable_version=productman_bot.BOT_VERSION,
         marketable_accent_color="#4A90E2",
-        marketable_title1="ProductMan",
+        marketable_title1="Productman",
         marketable_title2="Your hypothesis-driven product manager. Formulate, test, and iterate on product ideas systematically.",
         marketable_author="Flexus",
         marketable_occupation="Product Manager",
@@ -104,35 +89,27 @@ async def install(
         marketable_run_this="python -m flexus_simple_bots.productman.productman_bot",
         marketable_setup_default=productman_setup_schema,
         marketable_featured_actions=[
-            {"feat_question": "Help me create a new product hypothesis", "feat_run_as_setup": False, "feat_depends_on_setup": []},
-            {"feat_question": "Review my existing hypotheses", "feat_run_as_setup": False, "feat_depends_on_setup": []},
-            {"feat_question": "Document a customer interview", "feat_run_as_setup": False, "feat_depends_on_setup": []},
+            {"feat_question": "Start Node 1: Challenge my product idea", "feat_run_as_setup": False, "feat_depends_on_setup": []},
+            {"feat_question": "Start Node 2: Research and prioritize hypotheses", "feat_run_as_setup": False, "feat_depends_on_setup": []},
+            {"feat_question": "Start Node 3: Design experiments", "feat_run_as_setup": False, "feat_depends_on_setup": []},
         ],
-        marketable_intro_message="Hi! I'm ProductMan, your hypothesis-driven product manager. I help you formulate testable product hypotheses using the formula: 'My client wants to [DO] but currently cannot because [BLOCKER]. To test it I need [TEST] and success would be [SUCCESS].' Ready to explore a product idea?",
+        marketable_intro_message="Hi! I'm Productman, your Stage0 Product Validation Coach. I guide you through a 3-node process: (1) Problem Challenge - sharpen hypotheses via 'Guess The Business' game, (2) Market Research - score and prioritize, (3) Solution Design - create minimal experiments. Ready to validate your product idea systematically?",
         marketable_preferred_model_default="grok-code-fast-1",
         marketable_daily_budget_default=200_000,
         marketable_default_inbox_default=20_000,
         marketable_expert_default=ckit_bot_install.FMarketplaceExpertInput(
             fexp_name="productman_default",
-            fexp_system_prompt=productman_prompts.short_prompt,
-            fexp_python_kernel=PRODUCTMAN_DEFAULT_LARK,
+            fexp_system_prompt=productman_prompts.productman_prompt,
+            fexp_python_kernel="",
             fexp_block_tools="*setup*",
             fexp_allow_tools="",
             fexp_app_capture_tools=bot_internal_tools,
         ),
         marketable_expert_setup=ckit_bot_install.FMarketplaceExpertInput(
             fexp_name="productman_setup",
-            fexp_system_prompt=productman_prompts.productman_setup,
-            fexp_python_kernel=PRODUCTMAN_DEFAULT_LARK,
+            fexp_system_prompt=productman_prompts.productman_prompt,
+            fexp_python_kernel="",
             fexp_block_tools="",
-            fexp_allow_tools="",
-            fexp_app_capture_tools=bot_internal_tools,
-        ),
-        marketable_expert_subchat=ckit_bot_install.FMarketplaceExpertInput(
-            fexp_name="productman_subchat",
-            fexp_system_prompt=productman_prompts.short_prompt,
-            fexp_python_kernel=PRODUCTMAN_SUBCHAT_LARK,
-            fexp_block_tools="*setup*,generate_hypothesis_variations",
             fexp_allow_tools="",
             fexp_app_capture_tools=bot_internal_tools,
         ),
@@ -140,16 +117,9 @@ async def install(
         marketable_picture_big_b64=pic_big,
         marketable_picture_small_b64=pic_small,
         marketable_schedule=[
-            {
-                "sched_type": "SCHED_TASK_SORT",
-                "sched_when": "EVERY:10m",
-                "sched_first_question": "Look at inbox tasks and prioritize hypotheses that need attention. Sort them by urgency and potential impact.",
-            },
-            {
-                "sched_type": "SCHED_TODO",
-                "sched_when": "EVERY:5m",
-                "sched_first_question": "Work on the assigned hypothesis task. Guide the user through the hypothesis formula or generate variations as needed.",
-            },
+            # NOTE: After first use, Productman will formulate modifications to company's strategy, this will require a weekly scheduled task or something
+            prompts_common.SCHED_TASK_SORT_10M,
+            prompts_common.SCHED_TODO_5M,
         ]
     )
 
