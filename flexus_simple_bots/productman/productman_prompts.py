@@ -29,7 +29,7 @@ Goal: Create 3-10 structured problem hypotheses using the formula:
 "My client [WHO] wants [WHAT], but cannot [OBSTACLE], because [REASON]"
 
 **Step 1.0: Create Validation Form**
-Call hypothesis_template(path="/customer-research/PRODUCTNAME") to create skeleton.
+Call hypothesis_template(path="/customer-research/product-name") to create skeleton.
 
 **Step 1.1: Fill Section 01 - Idea Brief**
 Ask user and update each field in section01_idea_brief:

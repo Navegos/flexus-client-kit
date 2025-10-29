@@ -22,13 +22,13 @@ BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
 HYPOTHESIS_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
     name="hypothesis_template",
-    description="Create skeleton problem validation form in pdoc. The form tracks validation state from idea through prioritization. Fill fields during conversation - the filled document IS the process state. MUST use path /customer-research/PRODUCT_NAME",
+    description="Create skeleton problem validation form in pdoc. The form tracks validation state from idea through prioritization. Fill fields during conversation - the filled document is the process state.",
     parameters={
         "type": "object",
         "properties": {
             "path": {
                 "type": "string",
-                "description": "Path where to write template. MUST start with /customer-research/ (e.g. '/customer-research/my-saas-tool')"
+                "description": "Path where to write template. Should start with /customer-research/ and use kebab-case: '/customer-research/my-saas-tool'"
             },
         },
         "required": ["path"],
@@ -69,26 +69,9 @@ PRIORITIZATION_SCORER_TOOL = ckit_cloudtool.CloudTool(
     },
 )
 
-EXPERIMENT_TEMPLATES_TOOL = ckit_cloudtool.CloudTool(
-    name="get_experiment_templates",
-    description="Get experiment design templates for testing product hypotheses",
-    parameters={
-        "type": "object",
-        "properties": {
-            "experiment_type": {
-                "type": "string",
-                "enum": ["landing_page", "survey", "interviews", "concierge_mvp", "prototype", "all"],
-                "description": "Type of experiment template to retrieve"
-            },
-        },
-        "required": ["experiment_type"],
-    },
-)
-
 TOOLS = [
     HYPOTHESIS_TEMPLATE_TOOL,
     PRIORITIZATION_SCORER_TOOL,
-    EXPERIMENT_TEMPLATES_TOOL,
     fi_pdoc.POLICY_DOCUMENT_TOOL,
 ]
 
@@ -113,6 +96,12 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             return "Error: path required"
         if not path.startswith("/customer-research/"):
             return "Error: path must start with /customer-research/ (e.g. /customer-research/my-product)"
+        path_segments = path.strip("/").split("/")
+        for segment in path_segments:
+            if not segment:
+                continue
+            if not all(c.islower() or c.isdigit() or c == "-" for c in segment):
+                return f"Error: Path segment '{segment}' must use kebab-case (lowercase letters, numbers, hyphens only). Example: 'unicorn-horn-car-attachment'"
 
         skeleton = {
             "problem_validation": {
@@ -180,7 +169,7 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
         await pdoc_integration._write(path, json.dumps(skeleton, indent=2))
         logger.info(f"Created validation template at {path}")
-        return f"✓ Created problem validation template at {path}\n\nIMPORTANT: Now ask 5-7 rapid questions to fill sections 01-03 with initial values:\n- Product name (3 words)\n- Problem it solves\n- Target audience\n- Observations/evidence\n- Constraints\n\nFill the form immediately with user's answers using flexus_policy_document(op='update_json_text'). Don't leave fields blank."
+        return f"✓ Created problem validation template at {path}"
 
     @rcx.on_tool_call(PRIORITIZATION_SCORER_TOOL.name)
     async def toolcall_score_hypotheses(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
@@ -225,65 +214,6 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
         logger.info(f"Scored {len(hypotheses)} hypotheses")
         return json.dumps(results, indent=2)
-
-    @rcx.on_tool_call(EXPERIMENT_TEMPLATES_TOOL.name)
-    async def toolcall_experiment_templates(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
-        exp_type = model_produced_args.get("experiment_type", "all")
-
-        templates = {
-            "landing_page": {
-                "name": "Landing Page Test",
-                "description": "Create a landing page to test value proposition and measure interest",
-                "what_to_do": "Build simple landing page with headline, 3 benefits, CTA button",
-                "what_to_measure": "Sign-ups, email captures, time on page, bounce rate",
-                "success_criteria": "10%+ conversion rate, >2min avg time on page",
-                "effort": "Low (1-3 days)",
-                "tools": "Carrd, Webflow, Framer, Tilda"
-            },
-            "survey": {
-                "name": "Quantitative Survey",
-                "description": "Deploy structured survey to target audience to validate problem and willingness to pay",
-                "what_to_do": "Design 8-12 questions (60% closed, 40% open), deploy to 50-100 respondents",
-                "what_to_measure": "Problem frequency, current solutions, willingness to pay, demographics",
-                "success_criteria": "70%+ experience problem frequently, 40%+ willing to pay",
-                "effort": "Medium (1 week)",
-                "tools": "SurveyMonkey, Typeform, Google Forms"
-            },
-            "interviews": {
-                "name": "Customer Interviews",
-                "description": "Conduct 10-15 deep interviews with target audience",
-                "what_to_do": "Script 5-7 open-ended questions, record sessions, extract quotes",
-                "what_to_measure": "Pain intensity, current workarounds, willingness to change",
-                "success_criteria": "8+ of 10 interviewees describe problem unprompted",
-                "effort": "Medium (2 weeks)",
-                "tools": "Calendly, Zoom, Otter.ai"
-            },
-            "concierge_mvp": {
-                "name": "Concierge MVP",
-                "description": "Manually deliver the solution to 5-10 customers to test value",
-                "what_to_do": "Do the work manually behind the scenes, charge real money",
-                "what_to_measure": "Time to deliver, customer satisfaction, retention rate, referrals",
-                "success_criteria": "4+ of 5 customers renew, NPS >40",
-                "effort": "High (4+ weeks)",
-                "tools": "Manual process, spreadsheets, email"
-            },
-            "prototype": {
-                "name": "Interactive Prototype",
-                "description": "Build clickable prototype to test core user flow",
-                "what_to_do": "Design 3-5 key screens, make clickable, test with 10 users",
-                "what_to_measure": "Task completion rate, time to complete, confusion points",
-                "success_criteria": "80%+ complete primary task without help",
-                "effort": "Medium (1-2 weeks)",
-                "tools": "Figma, Balsamiq, Marvel"
-            }
-        }
-
-        if exp_type == "all":
-            return json.dumps(templates, indent=2)
-        elif exp_type in templates:
-            return json.dumps({exp_type: templates[exp_type]}, indent=2)
-        else:
-            return f"Unknown experiment type: {exp_type}"
 
     @rcx.on_tool_call(fi_pdoc.POLICY_DOCUMENT_TOOL.name)
     async def toolcall_pdoc(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
