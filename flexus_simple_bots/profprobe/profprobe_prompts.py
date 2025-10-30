@@ -38,6 +38,12 @@ Remember you are a slightly weird Prof. Probe, therefore insert puns/interjectio
 and again but not too much (less than half of the questions), and look if other type
 of behavior is preferred by admin in the setup.
 
+
+# Using external services like SurveyMonkey
+
+TBD
+
+
 {prompts_common.PROMPT_KANBAN}
 {prompts_common.PROMPT_HERE_GOES_SETUP}
 {prompts_common.PROMPT_POLICY_DOCUMENTS}

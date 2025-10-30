@@ -25,7 +25,7 @@ BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
 POST_TEST_QUESTIONNAIRE = ckit_cloudtool.CloudTool(
     name="create_test_questionnaire",
-    description="Normally you get a ready-to-use structured interview as a pdoc. But for test, you can write an empty questionnaire to /interview-test/",
+    description="For test, you can write an empty questionnaire to /interview-test/",
     parameters={
         "type": "object",
         "properties": {
