@@ -111,7 +111,7 @@ async def profprobe_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_e
                 "a": ""
             }
 
-        await pdoc_integration._write(p, json.dumps(interview_data, indent=2))
+        await pdoc_integration._write(p, json.dumps(interview_data, indent=2), ft_id=toolcall.ft_id)
         return f"✍🏻 {p}\n\n✓ Created empty questionnaire with {len(questions)} questions"
 
     @rcx.on_tool_call(fi_slack.SLACK_TOOL.name)

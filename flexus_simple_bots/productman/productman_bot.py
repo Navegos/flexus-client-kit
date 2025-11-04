@@ -35,43 +35,8 @@ HYPOTHESIS_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
     },
 )
 
-PRIORITIZATION_SCORER_TOOL = ckit_cloudtool.CloudTool(
-    name="score_hypotheses",
-    description="Score hypotheses on 4 dimensions (impact, evidence, urgency, feasibility) and calculate weighted total",
-    parameters={
-        "type": "object",
-        "properties": {
-            "hypotheses": {
-                "type": "array",
-                "description": "List of hypothesis objects to score",
-                "items": {"type": "object"}
-            },
-            "criteria_weights": {
-                "type": "object",
-                "description": "Weights for each dimension (should sum to 1.0)",
-                "properties": {
-                    "impact": {"type": "number"},
-                    "evidence": {"type": "number"},
-                    "urgency": {"type": "number"},
-                    "feasibility": {"type": "number"},
-                }
-            },
-            "scores": {
-                "type": "array",
-                "description": "Score arrays for each hypothesis, each containing [impact, evidence, urgency, feasibility]",
-                "items": {
-                    "type": "array",
-                    "items": {"type": "number"}
-                }
-            }
-        },
-        "required": ["hypotheses", "scores"],
-    },
-)
-
 TOOLS = [
     HYPOTHESIS_TEMPLATE_TOOL,
-    PRIORITIZATION_SCORER_TOOL,
     fi_pdoc.POLICY_DOCUMENT_TOOL,
 ]
 
@@ -170,50 +135,6 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
         await pdoc_integration._write(path, json.dumps(skeleton, indent=2), toolcall.fcall_ft_id)
         logger.info(f"Created validation template at {path}")
         return f"✍🏻 {path}\n\n✓ Created problem validation template"
-
-    @rcx.on_tool_call(PRIORITIZATION_SCORER_TOOL.name)
-    async def toolcall_score_hypotheses(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
-        hypotheses = model_produced_args.get("hypotheses", [])
-        scores = model_produced_args.get("scores", [])
-        weights = model_produced_args.get("criteria_weights", {
-            "impact": 0.3,
-            "evidence": 0.3,
-            "urgency": 0.2,
-            "feasibility": 0.2
-        })
-
-        if len(hypotheses) != len(scores):
-            return "Error: Number of hypotheses must match number of score arrays"
-
-        results = []
-        for i, hyp in enumerate(hypotheses):
-            score_arr = scores[i]
-            if len(score_arr) != 4:
-                return f"Error: Score array {i} must have exactly 4 values [impact, evidence, urgency, feasibility]"
-
-            total = (
-                score_arr[0] * weights.get("impact", 0.3) +
-                score_arr[1] * weights.get("evidence", 0.3) +
-                score_arr[2] * weights.get("urgency", 0.2) +
-                score_arr[3] * weights.get("feasibility", 0.2)
-            )
-
-            results.append({
-                "hypothesis": hyp,
-                "scores": {
-                    "impact": score_arr[0],
-                    "evidence": score_arr[1],
-                    "urgency": score_arr[2],
-                    "feasibility": score_arr[3],
-                    "total": round(total, 2)
-                }
-            })
-
-        # Sort by total score descending
-        results.sort(key=lambda x: x["scores"]["total"], reverse=True)
-
-        logger.info(f"Scored {len(hypotheses)} hypotheses")
-        return json.dumps(results, indent=2)
 
     @rcx.on_tool_call(fi_pdoc.POLICY_DOCUMENT_TOOL.name)
     async def toolcall_pdoc(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
