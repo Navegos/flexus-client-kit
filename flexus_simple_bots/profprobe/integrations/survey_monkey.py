@@ -111,10 +111,9 @@ class IntegrationSurveyMonkey:
                 "answers": {"choices": [{"text": c} for c in choices]}
             },
             "rating_scale": {
-                "family": "matrix",
+                "family": "single_choice",
                 "subtype": "rating",
                 "answers": {
-                    "rows": [{"text": ""}],
                     "choices": [{"text": str(i), "weight": i} for i in range(scale_min, scale_max + 1)]
                 }
             },
@@ -122,7 +121,7 @@ class IntegrationSurveyMonkey:
                 "family": "matrix",
                 "subtype": "nps",
                 "answers": {
-                    "rows": [{"text": ""}],
+                    "rows": [{"text": "Our product"}],
                     "choices": [{"text": str(i), "weight": i} for i in range(0, 11)]
                 }
             },
@@ -157,7 +156,7 @@ class IntegrationSurveyMonkey:
             },
             "date": {
                 "family": "datetime",
-                "subtype": "date"
+                "subtype": "date_only"
             },
             "open_ended": {
                 "family": "open_ended",
