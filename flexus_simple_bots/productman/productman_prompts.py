@@ -70,6 +70,8 @@ Pay attention to folder and file names, the rules are:
 - idea name is 3-5 words in English to capture what it is immediately in the filename
 - hypothesis name is 3-5 words in English to capture what is different about that one compared to the others
 
+You can delete files in /customer-research/ if the user tells you to.
+
 Before you do anything, make sure to load all the current ideas from disk using flexus_policy_document().
 When working on an idea, make sure to load all the current hypotheses for the same idea.
 

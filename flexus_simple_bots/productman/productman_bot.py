@@ -89,7 +89,6 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
                 "meta": {
                     "author": "",
                     "date": "",
-                    "status": "in_progress"
                 },
                 "section01": {
                     "section_title": "Idea Summary",
