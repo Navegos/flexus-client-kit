@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 import dataclasses
-from typing import Dict, Union, Optional, List, Any
+from typing import Dict, Union, Optional, List, Any, Tuple
 import argparse
 import gql
 
@@ -60,18 +60,20 @@ async def marketplace_upsert_dev_bot(
     marketable_default_inbox_default: int,
     marketable_picture_big_b64: str,
     marketable_picture_small_b64: str,
-    marketable_expert_default: FMarketplaceExpertInput,
-    marketable_expert_todo: Optional[FMarketplaceExpertInput] = None,
-    marketable_expert_setup: Optional[FMarketplaceExpertInput] = None,
-    marketable_expert_subchat: Optional[FMarketplaceExpertInput] = None,
+    marketable_experts: List[Tuple[str, FMarketplaceExpertInput]],
     marketable_tags: List[str] = [],
     marketable_stage: str = "MARKETPLACE_DEV",
 ) -> FBotInstallOutput:
     assert not ws_id.startswith("fx-"), "You can find workspace id in the browser address bar, when visiting for example the statistics page"
     http = await client.use_http()
     async with http as h:
+        experts_input = []
+        for expert_type, expert in marketable_experts:
+            expert_dict = dataclasses.asdict(expert)
+            expert_dict["fexp_name"] = f"{marketable_name}_{expert_type}"
+            experts_input.append(expert_dict)
         r = await h.execute(
-            gql.gql(f"""mutation InstallBot($ws: String!, $name: String!, $ver: String!, $title1: String!, $title2: String!, $author: String!, $accent_color: String!, $occupation: String!, $desc: String!, $typical_group: String!, $repo: String!, $run: String!, $setup: String!, $featured: [FFeaturedActionInput!]!, $intro: String!, $model: String!, $daily: Int!, $inbox: Int!, $e1: FMarketplaceExpertInput!, $e2: FMarketplaceExpertInput, $e3: FMarketplaceExpertInput, $e4: FMarketplaceExpertInput, $schedule: String!, $big: String!, $small: String!, $tags: [String!]!, $stage: String!) {{
+            gql.gql(f"""mutation InstallBot($ws: String!, $name: String!, $ver: String!, $title1: String!, $title2: String!, $author: String!, $accent_color: String!, $occupation: String!, $desc: String!, $typical_group: String!, $repo: String!, $run: String!, $setup: String!, $featured: [FFeaturedActionInput!]!, $intro: String!, $model: String!, $daily: Int!, $inbox: Int!, $experts: [FMarketplaceExpertInput!]!, $schedule: String!, $big: String!, $small: String!, $tags: [String!]!, $stage: String!) {{
                 marketplace_upsert_dev_bot(
                     ws_id: $ws,
                     marketable_name: $name,
@@ -91,10 +93,7 @@ async def marketplace_upsert_dev_bot(
                     marketable_preferred_model_default: $model,
                     marketable_daily_budget_default: $daily,
                     marketable_default_inbox_default: $inbox,
-                    marketable_expert_default: $e1,
-                    marketable_expert_todo: $e2,
-                    marketable_expert_setup: $e3,
-                    marketable_expert_subchat: $e4,
+                    marketable_experts: $experts,
                     marketable_schedule: $schedule,
                     marketable_picture_big_b64: $big,
                     marketable_picture_small_b64: $small,
@@ -123,10 +122,7 @@ async def marketplace_upsert_dev_bot(
                 "model": marketable_preferred_model_default,
                 "daily": marketable_daily_budget_default,
                 "inbox": marketable_default_inbox_default,
-                "e1": dataclasses.asdict(marketable_expert_default),
-                "e2": dataclasses.asdict(marketable_expert_todo) if marketable_expert_todo else None,
-                "e3": dataclasses.asdict(marketable_expert_setup) if marketable_expert_setup else None,
-                "e4": dataclasses.asdict(marketable_expert_subchat) if marketable_expert_subchat else None,
+                "experts": experts_input,
                 "schedule": json.dumps(marketable_schedule),
                 "tags": marketable_tags,
                 "stage": marketable_stage,

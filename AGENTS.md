@@ -29,6 +29,14 @@ ckit_utils.py
 gql_utils.py
 
 
+Example
+-------
+
+Before doing anything, read flexus_simple_bots/frog_*.py as an example to understand how
+bots are built. The Frog bot is specifically desgined as educational, simple bot, to
+showcase tricks available in this system.
+
+
 What Files Define a Bot?
 ------------------------
 
