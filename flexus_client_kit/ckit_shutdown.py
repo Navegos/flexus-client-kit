@@ -38,7 +38,7 @@ def setup_signals():
         shutdown_event.set()
         for k, ws_client in ws_clients.items():
             logger.info("ws close %r" % k)
-            # Luckily, there is a way to kick them from outside, and even not an async function!
+            # Luckily, there is a way to kick them from outside
             loop.create_task(ws_client.transport.close())
         for k, task in tasks_to_cancel.items():
             logger.info("task cancel %r" % k)
