@@ -131,7 +131,7 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             }
         }
 
-        await pdoc_integration.pdoc_write(path, json.dumps(skeleton, indent=2), toolcall.fcall_ft_id)
+        await pdoc_integration.pdoc_create(path, json.dumps(skeleton, indent=2), toolcall.fcall_ft_id)
         logger.info(f"Created idea template at {path}")
         return f"✍🏻 {path}\n\n✓ Created idea template with structured Q&A format"
 
@@ -228,7 +228,7 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             }
         }
 
-        await pdoc_integration.pdoc_write(path, json.dumps(skeleton, indent=2), toolcall.fcall_ft_id)
+        await pdoc_integration.pdoc_create(path, json.dumps(skeleton, indent=2), toolcall.fcall_ft_id)
         logger.info(f"Created hypothesis template at {path}")
         return f"✍🏻 {path}\n\n✓ Created hypothesis template for specific customer segment"
 

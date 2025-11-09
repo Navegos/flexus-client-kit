@@ -35,13 +35,17 @@ flexus_policy_document(op="list", args={"p": "/customer-research/"})
     List documents and subfolders.
     Shows direct children only, documents and subfolders with document counts.
 
-flexus_policy_document(op="cat", args={"p": "/company"})
-    Read a policy document.
+flexus_policy_document(op="cat", args={"p": "/folder/file"})
+flexus_policy_document(op="activate", args={"p": "/folder/file"})
+    Read a policy document. If it's "activate" the document will also appear for the user in the UI. Use "cat" to
+    understand the current situation, use "activate" when starting to work on a document.
 
-flexus_policy_document(op="write", args={"p": "/company", "text": '{"section1": "value1"}'})
-    Write or update a policy document with structured JSON content.
+flexus_policy_document(op="create", args={"p": "/folder/file", "text": '{"structured": "doc"}'})
+flexus_policy_document(op="overwrite", args={"p": "/folder/file", "text": '{"structured": "doc"}'})
+    Write a new policy document. Normally use "create" variant that returns error if document already exists.
+    Only use "overwrite" when you mean it.
 
-flexus_policy_document(op="update_json_text", args={"p": "/company", "json_path": "section1.field", "text": "new value"})
+flexus_policy_document(op="update_json_text", args={"p": "/folder/file", "json_path": "section1.field", "text": "new value"})
     Update a specific field in a document using json_path with dot notation.
     Example: "operations_overview.governance" updates doc["operations_overview"]["governance"]
 
@@ -61,9 +65,12 @@ Typical paths:
 /customer-research/interview-john-doe
 /historic-week-20251020/company
 
-The native Flexus UI (not messanger integrations) supports editing policy documents, the UI reacts
-to tool results that have a line "✍🏻/path/to/document" to give user a link to that document to
-view or edit.
+You are working within a UI that lets the user to edit any policy documents mentioned, bypassing your
+function calls, kind of like IDE lets the user to change the source files.
+The UI reacts to tool results that have a line "✍🏻/path/to/document" to give user a link to that document to
+view or edit. Some rules for sitting within this UI:
+- Never dump json onto the user, the user is unlikely to be a software engineer, and they see a user-friendly version of the content anyway in the UI.
+- Don't mention document paths, for the same reason, read the files instead and write a table with available ideas or hypothesis, using human readable text.
 """
 
 
@@ -121,15 +128,18 @@ class IntegrationPdoc:
                 folder_count = sum(1 for item in result if item.is_folder)
                 r += f"\n{doc_count} documents and {folder_count} folders\n"
 
-            elif op == "cat":
+            elif op == "cat" or op == "activate":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")
                 if not p:
                     return f"Error: p required\n\n{HELP}"
                 result = await self.pdoc_cat(p)
-                r += f"📄 {result.path}\n\n"
+                if op == "activate":
+                    r += f"✍🏻 {result.path}\n\n"
+                else:
+                    r += f"📄 {result.path}\n\n"
                 r += json.dumps(result.pdoc_content, indent=2)
 
-            elif op == "write":
+            elif op == "overwrite" or op == "create":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")
                 text = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "text", "")
                 if not p:
@@ -137,14 +147,17 @@ class IntegrationPdoc:
                 if not text:
                     return f"Error: text parameter required\n\n{HELP}"
 
-                # Validate JSON
                 try:
                     json.loads(text)
                 except json.JSONDecodeError as e:
                     return f"Error: text must be valid JSON: {str(e)}"
 
-                await self.pdoc_write(p, text, toolcall.fcall_ft_id)
-                r += f"✍🏻 {p}\n\n✓ Policy document updated"
+                if op == "create":
+                    await self.pdoc_create(p, text, toolcall.fcall_ft_id)
+                    r += f"✍🏻 {p}\n\n✓ Policy document created"
+                else:
+                    await self.pdoc_overwrite(p, text, toolcall.fcall_ft_id)
+                    r += f"✍🏻 {p}\n\n✓ Policy document updated"
 
             elif op == "update_json_text":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")
@@ -216,15 +229,25 @@ class IntegrationPdoc:
                 raise Exception(f"Policy document not found: {p}")
             return gql_utils.dataclass_from_dict(doc, PdocDocument)
 
-    # XXX add pdoc_rewrite
-
-    async def pdoc_write(self, p: str, text: str, ft_id: str) -> None:
+    async def pdoc_create(self, p: str, text: str, ft_id: str) -> None:
         http = await self.fclient.use_http()
         async with http as h:
             await h.execute(
                 gql.gql("""
-                    mutation PdocWrite($fgroup_id: String!, $p: String!, $text: String!, $ft_id: String) {
-                        policydoc_write(fgroup_id: $fgroup_id, p: $p, text: $text, ft_id: $ft_id)
+                    mutation PdocCreate($fgroup_id: String!, $p: String!, $text: String!, $ft_id: String) {
+                        policydoc_create(fgroup_id: $fgroup_id, p: $p, text: $text, ft_id: $ft_id)
+                    }
+                """),
+                variable_values={"fgroup_id": self.fgroup_id, "p": p, "text": text, "ft_id": ft_id},
+            )
+
+    async def pdoc_overwrite(self, p: str, text: str, ft_id: str) -> None:
+        http = await self.fclient.use_http()
+        async with http as h:
+            await h.execute(
+                gql.gql("""
+                    mutation PdocOverwrite($fgroup_id: String!, $p: String!, $text: String!, $ft_id: String) {
+                        policydoc_overwrite(fgroup_id: $fgroup_id, p: $p, text: $text, ft_id: $ft_id)
                     }
                 """),
                 variable_values={"fgroup_id": self.fgroup_id, "p": p, "text": text, "ft_id": ft_id},
