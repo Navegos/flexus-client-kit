@@ -30,8 +30,16 @@ IDEA_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
                 "type": "string",
                 "description": "Path where to write idea template. Should be /customer-research/{idea-name} using kebab-case: '/customer-research/unicorn-horn-car-idea'"
             },
+            "author": {
+                "type": "string",
+                "description": "Name of the person creating this idea"
+            },
+            "date": {
+                "type": "string",
+                "description": "Current date in YYYY-MM-DD format"
+            },
         },
-        "required": ["path"],
+        "required": ["path", "author", "date"],
     },
 )
 
@@ -45,8 +53,16 @@ HYPOTHESIS_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
                 "type": "string",
                 "description": "Path where to write hypothesis template, such as '/customer-research/unicorn-horn-car-hypotheses/social-media-influencers'"
             },
+            "author": {
+                "type": "string",
+                "description": "Name of the person creating this hypothesis"
+            },
+            "date": {
+                "type": "string",
+                "description": "Current date in YYYY-MM-DD format"
+            },
         },
-        "required": ["path"],
+        "required": ["path", "author", "date"],
     },
 )
 
@@ -73,8 +89,14 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
     @rcx.on_tool_call(IDEA_TEMPLATE_TOOL.name)
     async def toolcall_idea_template(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
         path = model_produced_args.get("path", "")
+        author = model_produced_args.get("author", "")
+        date = model_produced_args.get("date", "")
         if not path:
             return "Error: path required"
+        if not author:
+            return "Error: author required"
+        if not date:
+            return "Error: date required"
         if not path.startswith("/customer-research/"):
             return "Error: path must start with /customer-research/ (e.g. /customer-research/my-product-idea)"
         path_segments = path.strip("/").split("/")
@@ -87,8 +109,8 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
         skeleton = {
             "idea": {
                 "meta": {
-                    "author": "",
-                    "date": "",
+                    "author": author,
+                    "date": date,
                 },
                 "section01": {
                     "section_title": "Idea Summary",
@@ -138,8 +160,14 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
     @rcx.on_tool_call(HYPOTHESIS_TEMPLATE_TOOL.name)
     async def toolcall_hypothesis_template(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
         path = model_produced_args.get("path", "")
+        author = model_produced_args.get("author", "")
+        date = model_produced_args.get("date", "")
         if not path:
             return "Error: path required"
+        if not author:
+            return "Error: author required"
+        if not date:
+            return "Error: date required"
         if not path.startswith("/customer-research/"):
             return "Error: path must start with /customer-research/ (e.g. /customer-research/my-idea-hypotheses/segment-name)"
         if "-hypotheses/" not in path:
@@ -154,8 +182,8 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
         skeleton = {
             "hypothesis": {
                 "meta": {
-                    "author": "",
-                    "date": "",
+                    "author": author,
+                    "date": date,
                 },
                 "section01": {
                     "section_title": "Ideal Customer Profile",
