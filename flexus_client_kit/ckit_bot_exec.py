@@ -496,8 +496,14 @@ async def run_bots_in_this_group(
     logger.info("run_bots_in_this_group exit")
 
 
-def parse_bot_group_argument():
+def parse_bot_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--group", type=str, required=True, help="Flexus group ID where the bot will run, take it from the address bar in the browser when you are looking on something inside a group.")
+    parser.add_argument("--group", type=str, help="Flexus group ID where the bot will run, take it from the address bar in the browser when you are looking on something inside a group.")
+    parser.add_argument("--scenario", type=str, help="Path to trajectory JSON file for scenario replay")
+    parser.add_argument("--no-cleanup", action="store_true", help="(For scenario mode) Skip cleanup of test group")
     args = parser.parse_args()
-    return args.group
+
+    if not args.scenario and not args.group:
+        parser.error("specify --group or --scenario")
+
+    return args.group, args.scenario

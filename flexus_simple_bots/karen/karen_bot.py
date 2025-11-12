@@ -131,7 +131,7 @@ async def karen_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.
 
 
 def main():
-    group = ckit_bot_exec.parse_bot_group_argument()
+    group, _ = ckit_bot_exec.parse_bot_args()
     fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT, group), endpoint="/v1/jailed-bot")
     asyncio.run(ckit_bot_exec.run_bots_in_this_group(
         fclient,
