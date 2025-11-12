@@ -12,7 +12,7 @@ from flexus_client_kit import ckit_shutdown
 from flexus_client_kit.integrations import fi_pdoc
 from flexus_client_kit.integrations import fi_slack
 from flexus_simple_bots.profprobe import profprobe_install
-from flexus_simple_bots.profprobe.integrations import survey_monkey
+from flexus_simple_bots.profprobe.integrations import survey_monkey, prolific
 from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
 
 logger = logging.getLogger("bot_profprobe")
@@ -26,7 +26,9 @@ TOOLS = [
     fi_pdoc.POLICY_DOCUMENT_TOOL,
     survey_monkey.CREATE_SURVEY_TOOL,
     survey_monkey.GET_RESPONSES_TOOL,
-    survey_monkey.CONVERT_HYPOTHESIS_TOOL,
+    prolific.CREATE_STUDY_TOOL,
+    prolific.PUBLISH_PROLIFIC_STUDY_TOOL,
+    prolific.GET_STUDY_STATUS_TOOL,
 ]
 
 
@@ -52,6 +54,14 @@ async def profprobe_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_e
     if setup.get("SURVEYMONKEY_ACCESS_TOKEN"):
         surveymonkey_integration = survey_monkey.IntegrationSurveyMonkey(
             access_token=setup["SURVEYMONKEY_ACCESS_TOKEN"],
+            pdoc_integration=pdoc_integration
+        )
+
+    prolific_integration = None
+    if setup.get("PROLIFIC_API_TOKEN"):
+        prolific_integration = prolific.IntegrationProlific(
+            api_token=setup["PROLIFIC_API_TOKEN"],
+            surveymonkey_integration=surveymonkey_integration,
             pdoc_integration=pdoc_integration
         )
 
@@ -91,43 +101,68 @@ async def profprobe_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_e
             logger.info(f"toolcall_get_responses error: {e}")
             return f"Error: {e}"
 
-    @rcx.on_tool_call(survey_monkey.CONVERT_HYPOTHESIS_TOOL.name)
-    async def toolcall_convert_hypothesis(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
-        if not surveymonkey_integration:
-            return "Error: SurveyMonkey integration not configured. Please set SURVEYMONKEY_ACCESS_TOKEN in bot settings."
+    @rcx.on_tool_call(prolific.CREATE_STUDY_TOOL.name)
+    async def toolcall_create_study(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        if not prolific_integration:
+            return "Error: Prolific integration not configured. Please set PROLIFIC_API_TOKEN in bot settings."
         try:
-            return await surveymonkey_integration.convert_hypothesis_to_survey(toolcall, model_produced_args)
+            return await prolific_integration.create_study(toolcall, model_produced_args)
         except Exception as e:
-            logger.info(f"toolcall_convert_hypothesis error: {e}")
+            logger.info(f"toolcall_create_study error: {e}")
+            return f"Error: {e}"
+
+    @rcx.on_tool_call(prolific.PUBLISH_PROLIFIC_STUDY_TOOL.name)
+    async def toolcall_publish_study(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        if not prolific_integration:
+            return "Error: Prolific integration not configured. Please set PROLIFIC_API_TOKEN in bot settings."
+        try:
+            return await prolific_integration.publish_study(toolcall, model_produced_args)
+        except Exception as e:
+            logger.info(f"toolcall_publish_study error: {e}")
+            return f"Error: {e}"
+
+    @rcx.on_tool_call(prolific.GET_STUDY_STATUS_TOOL.name)
+    async def toolcall_get_study_status(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        if not prolific_integration:
+            return "Error: Prolific integration not configured. Please set PROLIFIC_API_TOKEN in bot settings."
+        try:
+            return await prolific_integration.get_study_status(toolcall, model_produced_args)
+        except Exception as e:
+            logger.info(f"toolcall_get_study_status error: {e}")
             return f"Error: {e}"
 
     async def check_surveys():
-        if not surveymonkey_integration or not setup.get("use_surveymonkey", True):
+        if not surveymonkey_integration:
             return
         try:
-            survey_list = await pdoc_integration.pdoc_list("/customer-research/unicorn-horn-car-hypotheses/")
-            for item in survey_list:
-                survey_name = item.path.split("/")[-1]
-                doc = await pdoc_integration.pdoc_cat(item.path)
-                content = doc.pdoc_content if isinstance(doc.pdoc_content, dict) else json.loads(doc.pdoc_content)
-                meta = content.get("meta", {})
-                if survey_id := meta.get("survey_id"):
-                    if await surveymonkey_integration.check_survey_has_responses(survey_id):
-                        content["meta"]["responses_processed"] = True
-                        await pdoc_integration.pdoc_write(item.path, json.dumps(content, indent=2), None)
-                        await ckit_kanban.bot_kanban_post_into_inbox(
-                            fclient,
-                            rcx.persona.persona_id,
-                            f"Process survey results: {survey_name}",
-                            json.dumps({
-                                "instruction": f"Get survey results from SurveyMonkey survey_id: {survey_id} and save them to /customer-research/unicorn-horn-car-survey-results/{survey_name}",
-                                "survey_id": survey_id,
-                                "survey_name": survey_name,
-                                "target_path": f"/customer-research/unicorn-horn-car-survey-results/{survey_name}"
-                            }),
-                            f"Survey {survey_name} has responses"
-                        )
-                        logger.info(f"Posted kanban task for completed survey {survey_name}")
+            ideas_list = await pdoc_integration.pdoc_list("/customer-research/")
+            for idea_folder in ideas_list:
+                idea_name = idea_folder.path.split("/")[-1]
+                survey_list = await pdoc_integration.pdoc_list(f"/customer-research/{idea_name}/")
+                for item in survey_list:
+                    if "survey-monkey-query" in item.path:
+                        survey_name = item.path.split("/")[-1]
+                        doc = await pdoc_integration.pdoc_cat(item.path)
+                        content = doc.pdoc_content if isinstance(doc.pdoc_content, dict) else json.loads(doc.pdoc_content)
+                        meta = content.get("meta", {})
+                        if survey_id := meta.get("survey_id"):
+                            if await surveymonkey_integration.check_survey_has_responses(survey_id):
+                                content["meta"]["responses_processed"] = True
+                                await pdoc_integration.pdoc_overwrite(item.path, json.dumps(content, indent=2), None)
+                                await ckit_kanban.bot_kanban_post_into_inbox(
+                                    fclient,
+                                    rcx.persona.persona_id,
+                                    f"Process survey results: {survey_name}",
+                                    json.dumps({
+                                        "instruction": f"Get survey results from SurveyMonkey survey_id: {survey_id} and save them to /customer-research/{idea_name}-survey-results/{survey_name}",
+                                        "survey_id": survey_id,
+                                        "survey_name": survey_name,
+                                        "idea_name": idea_name,
+                                        "target_path": f"/customer-research/{idea_name}-survey-results/{survey_name}"
+                                    }),
+                                    f"Survey {survey_name} has responses"
+                                )
+                                logger.info(f"Posted kanban task for completed survey {survey_name}")
         except Exception as e:
             logger.error(f"Error checking surveys: {e}", stack_info=True)
 

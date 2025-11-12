@@ -43,8 +43,8 @@ async def create_survey_with_metadata(pdoc_integration, survey_name):
         }
     }
     
-    path = f"/customer-research/unicorn-horn-car-hypotheses/{survey_name}-survey-monkey-query"
-    await pdoc_integration.pdoc_write(path, json.dumps(survey_data, indent=2), None)
+    path = f"/customer-research/test-idea/{survey_name}-survey-monkey-query"
+    await pdoc_integration.pdoc_create(path, json.dumps(survey_data, indent=2), None)
     return path, survey_data["meta"]["survey_id"]
 
 
@@ -53,7 +53,6 @@ async def scenario(setup: ckit_scenario_setup.ScenarioSetup) -> None:
         persona_marketable_name=profprobe_bot.BOT_NAME,
         persona_marketable_version=profprobe_bot.BOT_VERSION_INT,
         persona_setup={
-            "use_surveymonkey": True,
             "SURVEYMONKEY_ACCESS_TOKEN": "test_token_123",
             "slack_should_join": "",
             "SLACK_BOT_TOKEN": "test_token",
@@ -168,7 +167,7 @@ async def scenario(setup: ckit_scenario_setup.ScenarioSetup) -> None:
     
     await asyncio.sleep(2)
     
-    results_path = f"/customer-research/unicorn-horn-car-survey-results/{survey_name}"
+    results_path = f"/customer-research/test-idea-survey-results/{survey_name}"
     
     try:
         doc = await pdoc_integration.pdoc_cat(results_path)

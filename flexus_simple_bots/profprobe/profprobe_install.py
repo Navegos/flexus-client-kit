@@ -17,7 +17,7 @@ Runs structured questionnaires via Slack or Flexus UI. Ask questions one by one,
 
 **Features:**
 - Asks one question at a time, conversational style
-- Can use common messagers for interviews
+- Can use common messagers for interviews 
 - Can use external services, such as SurveyMonkey
 - Saves structured responses for analysis
 
@@ -30,31 +30,31 @@ Runs structured questionnaires via Slack or Flexus UI. Ask questions one by one,
 
 profprobe_setup_schema = [
     {
-        "bs_name": "use_surveymonkey",
-        "bs_type": "bool",
-        "bs_default": True,
+        "bs_name": "SURVEYMONKEY_ACCESS_TOKEN",
+        "bs_type": "string_multiline",
+        "bs_default": "",
         "bs_group": "Customization",
         "bs_order": 1,
         "bs_importance": 1,
-        "bs_description": "Use SurveyMonkey for automated surveys (if False, will conduct manual interviews via Slack)",
+        "bs_description": "SurveyMonkey OAuth 2.0 access token (requires surveys_write, surveys_read, collectors_write, collectors_read, responses_read_detail scopes)",
+    },
+    {
+        "bs_name": "PROLIFIC_API_TOKEN",
+        "bs_type": "string_multiline",
+        "bs_default": "",
+        "bs_group": "Customization",
+        "bs_order": 2,
+        "bs_importance": 1,
+        "bs_description": "Prolific API token for participant recruitment (get from https://app.prolific.com/researcher/tokens/)",
     },
     {
         "bs_name": "additional_instructions",
         "bs_type": "string_multiline",
         "bs_default": "",
         "bs_group": "Customization",
-        "bs_order": 2,
+        "bs_order": 3,
         "bs_importance": 0,
         "bs_description": "Additional interview style preferences or custom instructions",
-    },
-    {
-        "bs_name": "SURVEYMONKEY_ACCESS_TOKEN",
-        "bs_type": "string_multiline",
-        "bs_default": "",
-        "bs_group": "Customization",
-        "bs_order": 3,
-        "bs_importance": 1,
-        "bs_description": "SurveyMonkey OAuth 2.0 access token (requires surveys_write, surveys_read, collectors_write, collectors_read, responses_read_detail scopes)",
     },
 ]
 
@@ -98,7 +98,7 @@ async def install(
                 fexp_name="profprobe_default",
                 fexp_system_prompt=profprobe_prompts.profprobe_prompt,
                 fexp_python_kernel="",
-                fexp_block_tools="*setup*",
+                fexp_block_tools="*setup*,flexus_read_original",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=bot_internal_tools,
             )),
@@ -106,7 +106,7 @@ async def install(
                 fexp_name="profprobe_setup",
                 fexp_system_prompt=profprobe_prompts.profprobe_setup,
                 fexp_python_kernel="",
-                fexp_block_tools="",
+                fexp_block_tools="flexus_read_original",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=bot_internal_tools,
             )),
