@@ -99,7 +99,6 @@ TOOLS_DEFAULT = [
 
 async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.RobotContext) -> None:
     setup = ckit_bot_exec.official_setup_mixing_procedure(productman_install.productman_setup_schema, rcx.persona.persona_setup)
-
     pdoc_integration = fi_pdoc.IntegrationPdoc(fclient, rcx.persona.ws_root_group_id)
 
     if token := os.getenv("SURVEYMONKEY_ACCESS_TOKEN", ""):
@@ -238,13 +237,6 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
     async def toolcall_pdoc(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
         return await pdoc_integration.called_by_model(toolcall, model_produced_args)
 
-    try:
-        while not ckit_shutdown.shutdown_event.is_set():
-            await rcx.unpark_collected_events(sleep_if_no_work=10.0)
-
-    finally:
-        logger.info("%s exit" % (rcx.persona.persona_id,))
-
     @rcx.on_tool_call(survey_monkey.CREATE_SURVEY_TOOL.name)
     async def toolcall_create_survey(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
         if not surveymonkey_integration:
@@ -294,6 +286,14 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
         except Exception as e:
             logger.info(f"toolcall_get_study_status error: {e}")
             return f"Error: {e}"
+
+
+    try:
+        while not ckit_shutdown.shutdown_event.is_set():
+            await rcx.unpark_collected_events(sleep_if_no_work=10.0)
+
+    finally:
+        logger.info("%s exit" % (rcx.persona.persona_id,))
 
 
 def main():

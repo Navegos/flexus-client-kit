@@ -623,6 +623,7 @@ def parse_bot_args():
 
     if not args.scenario and not args.group:
         parser.error("specify --group or --scenario")
-    assert os.path.exists(args.scenario), "oops the scenario file does not exist, fail sooner"
+    if args.scenario:
+        assert os.path.exists(args.scenario), "oops the scenario file does not exist, fail sooner"
 
     return args.group or "TMP", args.scenario
