@@ -170,21 +170,18 @@ async def frog_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.R
 
 
 def main():
-    group, scenario = ckit_bot_exec.parse_bot_args()
+    group, scenario_fn = ckit_bot_exec.parse_bot_args()
+    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT, group), endpoint="/v1/jailed-bot")
 
-    if not scenario:
-        fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT, group), endpoint="/v1/jailed-bot")
-        asyncio.run(ckit_bot_exec.run_bots_in_this_group(
-            fclient,
-            marketable_name=BOT_NAME,
-            marketable_version=BOT_VERSION_INT,
-            fgroup_id=group,
-            bot_main_loop=frog_main_loop,
-            inprocess_tools=TOOLS,
-        ))
-    else:
-        scenario_path = os.path.join(os.path.dirname(__file__), scenario)
-        asyncio.run(ckit_scenario_run.run_scenario_from_trajectory(scenario_path, BOT_NAME))
+    asyncio.run(ckit_bot_exec.run_bots_in_this_group(
+        fclient,
+        marketable_name=BOT_NAME,
+        marketable_version=BOT_VERSION_INT,
+        fgroup_id=group,
+        bot_main_loop=frog_main_loop,
+        inprocess_tools=TOOLS,
+        scenario_fn=scenario_fn,
+    ))
 
 
 if __name__ == "__main__":

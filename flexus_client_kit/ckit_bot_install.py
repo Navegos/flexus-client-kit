@@ -145,6 +145,7 @@ async def bot_install_from_marketplace(
     specific_version: Optional[int] = None,
 ) -> InstallationResult:
     http = await client.use_http()
+    assert isinstance(new_setup, dict)
     async with http as h:
         r = await h.execute(
             gql.gql("""mutation PersonaUpsert($ws: String!, $g: String, $mn: String!, $id: String, $name: String!, $setup: String!, $v: Int, $dev: Boolean!) {

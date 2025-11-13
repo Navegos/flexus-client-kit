@@ -7,10 +7,9 @@ from typing import Optional
 
 import gql
 
-from flexus_client_kit import ckit_bot_query, ckit_client, ckit_scenario_setup
-from flexus_super_bots import run_dev_bots_in_ws
+from flexus_client_kit import ckit_bot_query, ckit_client, ckit_scenario_setup, ckit_shutdown
 
-logger = logging.getLogger("scenario_run")
+logger = logging.getLogger("scena")
 
 
 async def scenario_generate_user_message(
@@ -83,25 +82,15 @@ async def scenario_generate_tool_result_via_model(
 
 
 async def run_scenario_from_trajectory(
+    scenario: ckit_scenario_setup.ScenarioSetup,
     trajectory_json_path: str,
-    persona_marketable_name: str,
-    persona_setup: Optional[dict] = None,
 ) -> None:
-    scenario = ckit_scenario_setup.ScenarioSetup(service_name="trajectory_replay")
-
-    scenario.bs = await ckit_client.query_basic_stuff(scenario.fclient)
-    scenario.ws = await ckit_scenario_setup.select_workspace_for_scenario(scenario.fclient, scenario.bs, persona_marketable_name)
-    await scenario.create_test_group(group_prefix="trajectory")
-    await scenario.hire_bot(persona_marketable_name, None, persona_setup or {})
-    logger.info("Trajectory scenario setup completed in group %s", scenario.fgroup_name)
-
-    superpassword = await run_dev_bots_in_ws.get_superpassword(scenario.fclient.base_url_http, None)
-    logger.info(f"Starting bot {scenario.persona.persona_name} for trajectory replay")
-    bot_process = run_dev_bots_in_ws.start_bot_process(scenario.persona, scenario.ws.ws_id, superpassword)
-
     ft_id: Optional[str] = None
     try:
-        while True:
+        logger.info("HURRR DURRR")
+        import asyncio
+        await asyncio.sleep(10)
+        while 0:
             user_message = await scenario_generate_user_message(
                 scenario.fclient,
                 trajectory_json_path,
@@ -166,15 +155,16 @@ async def run_scenario_from_trajectory(
             logger.info(f"Bot finished processing, thread state: {threads_data.get(ft_id)}")
 
     finally:
-        bot_process.terminate()
-        try:
-            bot_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            bot_process.kill()
+        personas_output = await scenario.print_personas_in_group()
+        logger.info("Scenario over, personas in fgroup_id=%s:\n%s", scenario.fgroup_id, personas_output)
+        threads_output = await scenario.print_threads_in_group()
+        logger.info("Scenario over, threads in fgroup_id=%s:\n%s", scenario.fgroup_id, threads_output)
 
-        await scenario.print_personas_ktasks_and_threads()
         if scenario.should_cleanup:
             await scenario.cleanup()
             logger.info("Cleanup completed.")
         else:
             logger.info("Skipping cleanup (--no-cleanup flag set)")
+
+        loop = asyncio.get_running_loop()
+        ckit_shutdown.spiral_down_now(loop)

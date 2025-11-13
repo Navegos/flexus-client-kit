@@ -10,7 +10,8 @@ from typing import Dict, List, Optional, Any, Callable, Awaitable, NamedTuple, U
 import gql
 
 from flexus_client_kit import ckit_client, gql_utils, ckit_service_exec, ckit_kanban, ckit_cloudtool
-from flexus_client_kit import ckit_ask_model, ckit_shutdown, ckit_utils, ckit_bot_query
+from flexus_client_kit import ckit_ask_model, ckit_shutdown, ckit_utils, ckit_bot_query, ckit_scenario_setup, ckit_scenario_run
+
 
 logger = logging.getLogger("btexe")
 
@@ -477,7 +478,25 @@ async def run_bots_in_this_group(
     marketable_version: int,
     inprocess_tools: List[ckit_cloudtool.CloudTool],
     bot_main_loop: Callable[[ckit_client.FlexusClient, RobotContext], Awaitable[None]],
+    scenario_fn: str = "",  # XXX remove default when all bots get updated
 ) -> None:
+    scenario = None
+    scenario_task = None
+    if scenario_fn:
+        scenario = ckit_scenario_setup.ScenarioSetup(service_name="trajectory_replay")
+    if fgroup_id == "TMP":
+        await scenario.create_group_hire_and_start_bot(
+            marketable_name=marketable_name,
+            marketable_version=marketable_version,
+            persona_setup={},
+            inprocess_tools=inprocess_tools,
+        )
+        fgroup_id = scenario.fgroup_id
+        assert fgroup_id
+        scenario_task = asyncio.create_task(ckit_scenario_run.run_scenario_from_trajectory(scenario, scenario_fn), name="human_emulator")
+        scenario_task.add_done_callback(lambda t: ckit_utils.report_crash(t, ckit_scenario_setup.logger))
+    else:
+        assert not scenario_fn, "XXX might test in a specific group for some good reason?"
     bc = BotsCollection(
         fgroup_id=fgroup_id,
         marketable_name=marketable_name,
@@ -499,11 +518,16 @@ async def run_bots_in_this_group(
 def parse_bot_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--group", type=str, help="Flexus group ID where the bot will run, take it from the address bar in the browser when you are looking on something inside a group.")
-    parser.add_argument("--scenario", type=str, help="Path to trajectory JSON file for scenario replay")
+    parser.add_argument("--scenario", type=str, help="Reproduce a happy trajectory emulating human and tools, path to JSON file")
     parser.add_argument("--no-cleanup", action="store_true", help="(For scenario mode) Skip cleanup of test group")
     args = parser.parse_args()
 
     if not args.scenario and not args.group:
         parser.error("specify --group or --scenario")
 
-    return args.group, args.scenario
+    scenario_fn = args.scenario
+    if scenario_fn and not os.path.exists(scenario_fn):
+        # You can omit the full path
+        scenario_fn = os.path.join(os.path.dirname(__file__), scenario_fn)
+
+    return args.group or "TMP", scenario_fn
