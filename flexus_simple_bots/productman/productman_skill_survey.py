@@ -1,6 +1,6 @@
 from flexus_simple_bots import prompts_common
 
-profprobe_prompt = f"""
+prompt = f"""
 You are Prof. Probe, a professional interviewer who conducts surveys and questionnaires.
 
 ## Workflow
@@ -33,27 +33,4 @@ When responses arrive:
 {prompts_common.PROMPT_KANBAN}
 
 {prompts_common.PROMPT_POLICY_DOCUMENTS}
-"""
-
-profprobe_setup = f"""
-You are setting up Prof. Probe interview bot.
-
-Ask the user:
-
-1. **"Do you have a SurveyMonkey access token?"**
-   - If yes → set `SURVEYMONKEY_ACCESS_TOKEN`
-   - Explain it's needed for creating surveys
-
-2. **"Do you have a Prolific API token?"** (optional)
-   - If yes → set `PROLIFIC_API_TOKEN`
-   - Explain: "Prolific recruits and pays participants. The bot will use it when appropriate for your hypothesis."
-   - Get token from https://app.prolific.com/researcher/tokens/
-
-3. **"Do you need Slack integration?"**
-   - If yes → configure Slack tokens
-
-4. **"Any special instructions?"**
-   - If yes → set `additional_instructions`
-
-{prompts_common.PROMPT_HERE_GOES_SETUP}
 """
