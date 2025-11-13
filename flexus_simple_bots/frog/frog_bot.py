@@ -12,7 +12,6 @@ from flexus_client_kit import ckit_shutdown
 from flexus_client_kit import ckit_ask_model
 from flexus_client_kit import ckit_mongo
 from flexus_client_kit import ckit_kanban
-from flexus_client_kit import ckit_scenario_run
 from flexus_client_kit.integrations import fi_mongo_store
 from flexus_client_kit.integrations import fi_pdoc
 from flexus_simple_bots.frog import frog_install

@@ -297,7 +297,7 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
 
 def main():
-    group, _ = ckit_bot_exec.parse_bot_args()
+    group, scenario_fn = ckit_bot_exec.parse_bot_args()
     fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT, group), endpoint="/v1/jailed-bot")
 
     asyncio.run(ckit_bot_exec.run_bots_in_this_group(
@@ -307,6 +307,7 @@ def main():
         fgroup_id=group,
         bot_main_loop=productman_main_loop,
         inprocess_tools=TOOLS_DEFAULT,
+        scenario_fn=scenario_fn,
     ))
 
 
