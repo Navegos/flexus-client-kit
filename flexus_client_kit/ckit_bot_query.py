@@ -101,7 +101,7 @@ async def personas_in_ws_list(fclient: ckit_client.FlexusClient, ws_id: str) -> 
     return [gql_utils.dataclass_from_dict(p, FPersonaOutput) for p in r["workspace_personas_list"]["personas"] if p.get("marketable_run_this")]
 
 
-async def wait_until_bot_threads_stop(
+async def wait_until_bot_threads_stop(  # XXX questionable, delete?
     client: ckit_client.FlexusClient,
     persona: FPersonaOutput,
     inprocess_tools: List[ckit_cloudtool.CloudTool],

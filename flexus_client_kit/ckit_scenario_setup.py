@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional, Callable, Awaitable, List
 
 from flexus_client_kit import gql_utils, ckit_bot_install, ckit_client, ckit_shutdown, ckit_cloudtool, ckit_ask_model, ckit_kanban, ckit_bot_query
 
-logger = logging.getLogger("scenario")
+logger = logging.getLogger("setup")
 
 MARKETPLACE_DEV_STAGES = ["MARKETPLACE_DEV", "MARKETPLACE_WAITING_IMAGE", "MARKETPLACE_FAILED_IMAGE_BUILD"]
 
@@ -134,7 +134,6 @@ class ScenarioSetup:
     #             await ckit_mongo.store_file(self.mongo_collection, filename, f.read())
 
     async def print_personas_in_group(self) -> str:
-        print(555)
         lines = []
         for persona in (await ckit_bot_query.persona_list(self.fclient, self.fgroup_id)):
             lines.append(f"    👤{persona.persona_id} name={persona.persona_name!r} marketplace={persona.persona_marketable_name}@{persona.persona_marketable_version} pref_model={persona.persona_preferred_model}")
@@ -155,7 +154,6 @@ class ScenarioSetup:
         return "\n".join(lines)
 
     async def print_threads_in_group(self) -> str:
-        print(666)
         async with (await self.fclient.use_http()) as http:
             threads = await http.execute(gql.gql(f"""
                 query GetGroupThreads($fgroup_id: String!) {{
@@ -164,42 +162,42 @@ class ScenarioSetup:
                     }}
                 }}"""), variable_values={"fgroup_id": self.fgroup_id})
 
-        lines = []
-        for thread_dict in threads["thread_list"]:
-            thread = gql_utils.dataclass_from_dict(thread_dict, ckit_ask_model.FThreadOutput)
+            lines = []
+            for thread_dict in threads["thread_list"]:
+                thread = gql_utils.dataclass_from_dict(thread_dict, ckit_ask_model.FThreadOutput)
 
-            a, t, u = thread.ft_need_assistant, thread.ft_need_tool_calls, thread.ft_need_user
-            need_str = f"need_assistant={a}" if a != -1 else f"ended_with need_tool_calls={t}" if t != -1 else f"ended_with need_user={u}"
-            persona_id = thread.ft_persona_id or "N/A"
-            tool_names = [tool['function']['name'] for tool in thread.ft_toolset] if thread.ft_toolset else []
-            error_part = f" error:{thread.ft_error}" if thread.ft_error else ""
-            lines.append(f"    📝{thread.ft_id} title={thread.ft_title!r} persona={persona_id} exp={thread.ft_fexp_id} budget={thread.ft_budget} coins={thread.ft_coins}")
-            lines.append(f"    searchable={thread.ft_app_searchable!r} capture={thread.ft_app_capture!r} {need_str} toolset:{tool_names}{error_part}")
+                a, t, u = thread.ft_need_assistant, thread.ft_need_tool_calls, thread.ft_need_user
+                need_str = f"need_assistant={a}" if a != -1 else f"ended_with need_tool_calls={t}" if t != -1 else f"ended_with need_user={u}"
+                persona_id = thread.ft_persona_id or "N/A"
+                tool_names = [tool['function']['name'] for tool in thread.ft_toolset] if thread.ft_toolset else []
+                error_part = f" error:{thread.ft_error}" if thread.ft_error else ""
+                lines.append(f"    📝{thread.ft_id} title={thread.ft_title!r} persona={persona_id} exp={thread.ft_fexp_id} budget={thread.ft_budget} coins={thread.ft_coins}")
+                lines.append(f"    searchable={thread.ft_app_searchable!r} capture={thread.ft_app_capture!r} {need_str} toolset:{tool_names}{error_part}")
 
-            messages = await http.execute(gql.gql(f"""
-                query ThreadMessages($ft_id: String!) {{
-                    thread_messages_list(ft_id: $ft_id) {{ {gql_utils.gql_fields(ckit_ask_model.FThreadMessageOutput)} }}
-                }}"""), variable_values={"ft_id": thread.ft_id})
+                messages = await http.execute(gql.gql(f"""
+                    query ThreadMessages($ft_id: String!) {{
+                        thread_messages_list(ft_id: $ft_id) {{ {gql_utils.gql_fields(ckit_ask_model.FThreadMessageOutput)} }}
+                    }}"""), variable_values={"ft_id": thread.ft_id})
 
-            colors = {"user": "\033[94m", "assistant": "\033[92m", "system": "\033[93m", "tool": "\033[95m", "kernel": "\033[96m"}
-            for msg_dict in messages["thread_messages_list"]:
-                msg = gql_utils.dataclass_from_dict(msg_dict, ckit_ask_model.FThreadMessageOutput)
-                if msg.ftm_alt == 100:
-                    content = str(msg.ftm_content).replace('\n', '\\n')[:120]
-                    if len(str(msg.ftm_content)) > 120:
-                        content += "..."
-                    color = colors.get(msg.ftm_role, "\033[0m")
-                    msg_key = "%03d:%03d" % (msg.ftm_alt, msg.ftm_num)
-                    lines.append(f"        {msg_key} {color}{msg.ftm_role}\033[0m: {content}")
-                    if msg.ftm_role == 'assistant' and msg.ftm_tool_calls:
-                        for tool_call in msg.ftm_tool_calls:
-                            tool_name = tool_call.get('function', {}).get('name', 'unknown')
-                            tool_args = str(tool_call.get('function', {}).get('arguments', ''))[:60]
-                            if len(str(tool_call.get('function', {}).get('arguments', ''))) > 60:
-                                tool_args += "..."
-                            lines.append(f"        \033[96m🔧 {tool_name}\033[0m: {tool_args}")
-        if len(lines) == 0:
-            lines.append("    No threads")
+                colors = {"user": "\033[94m", "assistant": "\033[92m", "system": "\033[93m", "tool": "\033[95m", "kernel": "\033[96m"}
+                for msg_dict in messages["thread_messages_list"]:
+                    msg = gql_utils.dataclass_from_dict(msg_dict, ckit_ask_model.FThreadMessageOutput)
+                    if msg.ftm_alt == 100:
+                        content = str(msg.ftm_content).replace('\n', '\\n')[:120]
+                        if len(str(msg.ftm_content)) > 120:
+                            content += "..."
+                        color = colors.get(msg.ftm_role, "\033[0m")
+                        msg_key = "%03d:%03d" % (msg.ftm_alt, msg.ftm_num)
+                        lines.append(f"        {msg_key} {color}{msg.ftm_role}\033[0m: {content}")
+                        if msg.ftm_role == 'assistant' and msg.ftm_tool_calls:
+                            for tool_call in msg.ftm_tool_calls:
+                                tool_name = tool_call.get('function', {}).get('name', 'unknown')
+                                tool_args = str(tool_call.get('function', {}).get('arguments', ''))[:60]
+                                if len(str(tool_call.get('function', {}).get('arguments', ''))) > 60:
+                                    tool_args += "..."
+                                lines.append(f"        \033[96m🔧 {tool_name}\033[0m: {tool_args}")
+            if len(lines) == 0:
+                lines.append("    No threads")
         return "\n".join(lines)
 
     async def run_scenario(self, scenario_func: Callable[..., None], cleanup_wait_secs: int = 300, **kwargs) -> None:

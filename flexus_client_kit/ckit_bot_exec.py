@@ -186,7 +186,7 @@ class RobotContext:
 class BotInstance(NamedTuple):
     fclient: ckit_client.FlexusClient
     atask: asyncio.Task
-    eventgen: RobotContext
+    instance_rcx: RobotContext
 
 
 async def crash_boom_bang(fclient: ckit_client.FlexusClient, rcx: RobotContext, bot_main_loop: Callable[[ckit_client.FlexusClient, RobotContext], Awaitable[None]]) -> None:
@@ -297,7 +297,7 @@ async def subscribe_and_produce_callbacks(
                     handled = True
                     persona_id = upd.news_payload_id
                     if bot := bc.bots_running.get(persona_id, None):
-                        if bot.eventgen.persona.persona_setup != upd.news_payload_persona.persona_setup:
+                        if bot.instance_rcx.persona.persona_setup != upd.news_payload_persona.persona_setup:
                             logger.info("Persona %s setup changed, restarting bot." % persona_id)
                             bc.bots_running[persona_id].atask.cancel()
                             try:
@@ -310,7 +310,7 @@ async def subscribe_and_produce_callbacks(
                         bc.bots_running[persona_id] = BotInstance(
                             fclient=fclient,
                             atask=asyncio.create_task(crash_boom_bang(fclient, rcx, bc.bot_main_loop)),
-                            eventgen=rcx,
+                            instance_rcx=rcx,
                         )
                         reassign_threads = True
 
@@ -335,8 +335,8 @@ async def subscribe_and_produce_callbacks(
                         bc.thread_tracker[thread.ft_id] = ckit_bot_query.FThreadWithMessages(thread.ft_persona_id, thread, thread_messages=dict())
                     persona_id = thread.ft_persona_id
                     if persona_id in bc.bots_running:
-                        bc.bots_running[persona_id].eventgen._parked_threads[thread.ft_id] = thread
-                        bc.bots_running[persona_id].eventgen._parked_anything_new.set()
+                        bc.bots_running[persona_id].instance_rcx._parked_threads[thread.ft_id] = thread
+                        bc.bots_running[persona_id].instance_rcx._parked_anything_new.set()
                     reassign_threads = True
 
                 elif upd.news_action in ["DELETE", "STOP_TRACKING"]:
@@ -356,8 +356,8 @@ async def subscribe_and_produce_callbacks(
                         bc.thread_tracker[message.ftm_belongs_to_ft_id].thread_messages[k] = message
                         persona_id = bc.thread_tracker[message.ftm_belongs_to_ft_id].persona_id
                         if persona_id in bc.bots_running:
-                            bc.bots_running[persona_id].eventgen._parked_messages[k] = message
-                            bc.bots_running[persona_id].eventgen._parked_anything_new.set()
+                            bc.bots_running[persona_id].instance_rcx._parked_messages[k] = message
+                            bc.bots_running[persona_id].instance_rcx._parked_anything_new.set()
                         else:
                             logger.info("Thread %s is about persona=%s which is not running here." % (message.ftm_belongs_to_ft_id, persona_id))
                     else:
@@ -377,15 +377,15 @@ async def subscribe_and_produce_callbacks(
                     persona_id = toolcall.connected_persona_id
                     if persona_id in bc.bots_running:
                         bot = bc.bots_running[persona_id]
-                        if toolcall.fcall_name not in bot.eventgen._handler_per_tool:
+                        if toolcall.fcall_name not in bot.instance_rcx._handler_per_tool:
                             # give bot main loop a couple of seconds to start up and install the handler, it's async everything here ... :/
                             for _ in range(10):
-                                if bot.eventgen._ready:
+                                if bot.instance_rcx._ready:
                                     break
                                 if await ckit_shutdown.wait(1):
                                     break
                         set1 = set(t.name for t in bc.inprocess_tools)
-                        set2 = set(bot.eventgen._handler_per_tool.keys())
+                        set2 = set(bot.instance_rcx._handler_per_tool.keys())
                         if set1 != set2:
                             logger.error(
                                 "Whoops make sure you call on_tool_call() for each of inprocess_tools.\nYou advertise: %r\nYou have hanlders: %r"
@@ -395,8 +395,8 @@ async def subscribe_and_produce_callbacks(
                             break
                         assert toolcall.fcall_name in set1
                         assert toolcall.fcall_name in set2
-                        bot.eventgen._parked_toolcalls.append(toolcall)
-                        bot.eventgen._parked_anything_new.set()
+                        bot.instance_rcx._parked_toolcalls.append(toolcall)
+                        bot.instance_rcx._parked_anything_new.set()
                     else:
                         logger.info("%s is about persona=%s which is not running here." % (toolcall.fcall_id, persona_id))
 
@@ -406,16 +406,16 @@ async def subscribe_and_produce_callbacks(
                     task = upd.news_payload_task
                     persona_id = task.persona_id
                     if persona_id in bc.bots_running:
-                        bc.bots_running[persona_id].eventgen.latest_tasks[task.ktask_id] = task
-                        bc.bots_running[persona_id].eventgen._parked_tasks[task.ktask_id] = task
-                        bc.bots_running[persona_id].eventgen._parked_anything_new.set()
+                        bc.bots_running[persona_id].instance_rcx.latest_tasks[task.ktask_id] = task
+                        bc.bots_running[persona_id].instance_rcx._parked_tasks[task.ktask_id] = task
+                        bc.bots_running[persona_id].instance_rcx._parked_anything_new.set()
                     else:
                         logger.info("Task %s is about persona=%s which is not running here." % (task.ktask_id, persona_id))
                 elif upd.news_action == "DELETE":
                     handled = True
                     persona_id = upd.news_payload_task.persona_id
-                    if persona_id in bc.bots_running and upd.news_payload_id in bc.bots_running[persona_id].eventgen.latest_tasks:
-                        del bc.bots_running[persona_id].eventgen.latest_tasks[upd.news_payload_id]
+                    if persona_id in bc.bots_running and upd.news_payload_id in bc.bots_running[persona_id].instance_rcx.latest_tasks:
+                        del bc.bots_running[persona_id].instance_rcx.latest_tasks[upd.news_payload_id]
 
             elif upd.news_action == "INITIAL_UPDATES_OVER":
                 if len(bc.bots_running) == 0:
@@ -437,15 +437,15 @@ async def subscribe_and_produce_callbacks(
                 assert len(bc.thread_tracker) <= MAX_THREADS, "backend should send STOP_TRACKING wtf"   # actually sometimes triggers after reconnect :/
                 # There we go, now it's O(1) because it's limited
                 for bot in bc.bots_running.values():
-                    to_test = list(bot.eventgen.latest_threads.keys())
+                    to_test = list(bot.instance_rcx.latest_threads.keys())
                     for t in to_test:
                         if t not in bc.thread_tracker:
-                            del bot.eventgen.latest_threads[t]
+                            del bot.instance_rcx.latest_threads[t]
                 for tid, thread in bc.thread_tracker.items():
                     persona_id = thread.thread_fields.ft_persona_id
                     assert persona_id, "Oops persona_id is empty 8-[  ]"
                     if persona_id in bc.bots_running:
-                        ev = bc.bots_running[persona_id].eventgen
+                        ev = bc.bots_running[persona_id].instance_rcx
                         if tid not in ev.latest_threads:
                             ev.latest_threads[tid] = thread
                             ev._parked_messages.update(thread.thread_messages)
@@ -468,6 +468,104 @@ async def shutdown_bots(
             bot.atask.cancel()
         await asyncio.gather(*[bot.atask for bot in still_running], return_exceptions=True)
     logger.info("shutdown_bots success")
+
+
+
+async def run_happy_trajectory(
+    bc: BotsCollection,
+    scenario: ckit_scenario_setup.ScenarioSetup,
+    trajectory_json_path: str,
+) -> None:
+    ft_id: Optional[str] = None
+    try:
+        while 1:
+            user_message = await ckit_scenario_run.scenario_generate_user_message(
+                scenario.fclient,
+                trajectory_json_path,
+                scenario.fgroup_id,
+                ft_id,
+            )
+            logger.info(f"Generated user message: {user_message}")
+
+            if user_message == "SCENARIO_DONE":
+                logger.info("Trajectory completed successfully!")
+                break
+
+            if not ft_id:
+                async with (await scenario.fclient.use_http()) as http:
+                    bot_result = await http.execute(gql.gql("""
+                        mutation BotActivate($persona_id: String!, $first_question: String!, $activation_type: String!) {
+                            bot_activate(
+                                who_is_asking: "trajectory_scenario",
+                                persona_id: $persona_id,
+                                activation_type: $activation_type,
+                                first_question: $first_question,
+                                title: "Trajectory Test",
+                                first_calls: "null"
+                            ) {
+                                ft_id
+                            }
+                        }"""),
+                        variable_values={
+                            "persona_id": scenario.persona.persona_id,
+                            "first_question": user_message,
+                            "activation_type": "default"
+                        }
+                    )
+                ft_id = bot_result["bot_activate"]["ft_id"]
+                logger.info(f"Created thread {ft_id}")
+            else:
+                async with (await scenario.fclient.use_http()) as http:
+                    await http.execute(gql.gql("""
+                        mutation SendMessage($input: FThreadMultipleMessagesInput!) {
+                            thread_messages_create_multiple(input: $input)
+                        }"""),
+                        variable_values={
+                            "input": {
+                                "ftm_belongs_to_ft_id": ft_id,
+                                "messages": [{
+                                    "ftm_belongs_to_ft_id": ft_id,
+                                    "ftm_alt": 100,
+                                    "ftm_num": -1,
+                                    "ftm_prev_alt": 100,
+                                    "ftm_role": "user",
+                                    "ftm_content": json.dumps(user_message),
+                                    "ftm_call_id": "",
+                                    "ftm_provenance": json.dumps({"system": "trajectory_scenario"}),
+                                }]
+                            }
+                        }
+                    )
+
+            print(888)
+            if my_bot := bc.bots_running[scenario.persona.persona_id]:
+                # BotInstance(fclient=<flexus_client_kit.ckit_client.FlexusClient object at 0x103d41450>, atask=<Task pending name='Task-31' coro=<crash_boom_bang() running at /Users/kot/code/flexus-client-kit/flexus_client_kit/ckit_bot_exec.py:196> wait_for=<Future pending cb=[Task.task_wakeup()]>>, instance_rcx=<flexus_client_kit.ckit_bot_exec.RobotContext object at 0x103d9a890>)
+                print(my_bot.instance_rcx)
+                print(999)
+
+                print(my_bot)
+            break
+
+            # threads_data = await ckit_bot_query.wait_until_bot_threads_stop(
+            #     scenario.bot_fclient, scenario.persona, scenario.inprocess_tools, only_ft_id=ft_id, timeout=120
+            # )
+            # logger.info(f"Bot finished processing, thread state: {threads_data.get(ft_id)}")
+
+    finally:
+        logger.info("Scenario is over, error or not error")
+        threads_output = await scenario.print_threads_in_group()
+        logger.info("Scenario over, threads in fgroup_id=%s:\n%s", scenario.fgroup_id, threads_output)
+        personas_output = await scenario.print_personas_in_group()
+        logger.info("Scenario over, personas in fgroup_id=%s:\n%s", scenario.fgroup_id, personas_output)
+
+        if scenario.should_cleanup:
+            await scenario.cleanup()
+            logger.info("Cleanup completed.")
+        else:
+            logger.info("Skipping cleanup (--no-cleanup flag set)")
+
+        loop = asyncio.get_running_loop()
+        ckit_shutdown.spiral_down_now(loop)
 
 
 async def run_bots_in_this_group(
@@ -493,8 +591,6 @@ async def run_bots_in_this_group(
         )
         fgroup_id = scenario.fgroup_id
         assert fgroup_id
-        scenario_task = asyncio.create_task(ckit_scenario_run.run_scenario_from_trajectory(scenario, scenario_fn), name="human_emulator")
-        scenario_task.add_done_callback(lambda t: ckit_utils.report_crash(t, ckit_scenario_setup.logger))
     else:
         assert not scenario_fn, "XXX might test in a specific group for some good reason?"
     bc = BotsCollection(
@@ -504,6 +600,9 @@ async def run_bots_in_this_group(
         inprocess_tools=inprocess_tools,
         bot_main_loop=bot_main_loop,
     )
+    if scenario_fn:
+        scenario_task = asyncio.create_task(run_happy_trajectory(bc, scenario, scenario_fn), name="human_emulator")
+        scenario_task.add_done_callback(lambda t: ckit_utils.report_crash(t, ckit_scenario_setup.logger))
     keepalive_task = asyncio.create_task(i_am_still_alive(fclient, marketable_name, marketable_version, fgroup_id))
     keepalive_task.add_done_callback(lambda t: ckit_utils.report_crash(t, logger))
     try:
@@ -524,10 +623,6 @@ def parse_bot_args():
 
     if not args.scenario and not args.group:
         parser.error("specify --group or --scenario")
+    assert os.path.exists(args.scenario), "oops the scenario file does not exist, fail sooner"
 
-    scenario_fn = args.scenario
-    if scenario_fn and not os.path.exists(scenario_fn):
-        # You can omit the full path
-        scenario_fn = os.path.join(os.path.dirname(__file__), scenario_fn)
-
-    return args.group or "TMP", scenario_fn
+    return args.group or "TMP", args.scenario
