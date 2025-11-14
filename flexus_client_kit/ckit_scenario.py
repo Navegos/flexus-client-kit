@@ -2,8 +2,9 @@ import uuid
 import logging
 import argparse
 import yaml
+import dataclasses
 from dataclasses import dataclass
-from typing import Optional, Dict, List, Union
+from typing import Optional, Dict, List, Union, Any
 
 import gql
 
@@ -22,6 +23,19 @@ class ScenarioHumanMessageOutput:
 class ScenarioJudgeOutput:
     rating: int
     reason: str
+
+
+@dataclass
+class BotScenarioUpsertInput:
+    btest_marketable_name: str
+    btest_marketable_version_str: str
+    btest_name: str
+    btest_trajectory_happy: str
+    btest_trajectory_actual: str
+    btest_rating_happy: int
+    btest_rating_actually: int
+    btest_shaky_human: int
+    btest_shaky_tool: int
 
 
 MARKETPLACE_DEV_STAGES = ["MARKETPLACE_DEV", "MARKETPLACE_WAITING_IMAGE", "MARKETPLACE_FAILED_IMAGE_BUILD"]
@@ -139,7 +153,7 @@ def messages_to_dict_list_for_export(messages: list) -> list:
 def yaml_dump_with_multiline(data: dict) -> str:
     dumper = yaml.Dumper
     dumper.add_representer(str, _represent_multiline_str)
-    return yaml.dump(data, Dumper=dumper, default_flow_style=False, allow_unicode=True, width=100)
+    return yaml.dump(data, Dumper=dumper, default_flow_style=False, allow_unicode=True, width=100, sort_keys=False)
 
 
 def dump_thread_messages_to_yaml(messages: list) -> str:
@@ -319,3 +333,20 @@ class ScenarioSetup:
                     await http.execute(gql.gql("""mutation($id:String!){group_delete(fgroup_id:$id)}"""), variable_values={"id": self.fgroup_id})
             except Exception as e:
                 logger.warning(f"⚠️ Failed to delete test group {self.fgroup_name}: {e}")
+
+
+async def bot_scenario_result_upsert(
+    client: ckit_client.FlexusClient,
+    input: BotScenarioUpsertInput,
+) -> bool:
+    http_client = await client.use_http()
+    async with http_client as http:
+        result = await http.execute(
+            gql.gql("""mutation BotScenarioResultUpsert($input: BotScenarioUpsertInput!) {
+                bot_scenario_result_upsert(input: $input)
+            }"""),
+            variable_values={
+                "input": dataclasses.asdict(input)
+            }
+        )
+    return result["bot_scenario_result_upsert"]

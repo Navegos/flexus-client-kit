@@ -115,6 +115,14 @@ def marketplace_version_as_int(v: str) -> int:
     return a * 100_000_000 + b * 10_000 + c
 
 
+def marketplace_version_as_str(v: int) -> str:
+    a = v // 100_000_000
+    remainder = v % 100_000_000
+    b = remainder // 10_000
+    c = remainder % 10_000
+    return f"{a}.{b}.{c}"
+
+
 @dataclass
 class FWorkspaceInvitationOutput:
     wsi_id: str

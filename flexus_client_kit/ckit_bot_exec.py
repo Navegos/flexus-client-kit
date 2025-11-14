@@ -12,6 +12,7 @@ import gql
 
 from flexus_client_kit import ckit_client, gql_utils, ckit_service_exec, ckit_kanban, ckit_cloudtool
 from flexus_client_kit import ckit_ask_model, ckit_shutdown, ckit_utils, ckit_bot_query, ckit_scenario
+from flexus_simple_bots import prompts_common
 
 
 logger = logging.getLogger("btexe")
@@ -554,9 +555,8 @@ async def run_happy_trajectory(
         logger.info("Scenario is over, problem or not")
         threads_output = await ckit_scenario.scenario_print_threads(scenario.fclient, scenario.fgroup_id)
         logger.info("Scenario is over, threads in fgroup_id=%s:\n%s", scenario.fgroup_id, threads_output)
-        # personas_output = await ckit_scenario.scenario_print_personas(scenario.fclient, scenario.fgroup_id)
-        # logger.info("Scenario is over, personas in fgroup_id=%s:\n%s", scenario.fgroup_id, personas_output)
 
+        trajectory_happy = open(trajectory_yaml_path).read()
         judge_result = await ckit_scenario.scenario_judge(
             scenario.fclient,
             trajectory_yaml_path,
@@ -566,19 +566,38 @@ async def run_happy_trajectory(
         logger.info(f"Scenario judge reason: {judge_result.reason}")
 
         scenario_basename = os.path.splitext(os.path.basename(trajectory_yaml_path))[0]
-        random_id = uuid.uuid4().hex[:8]
-        output_dir = "./scenarios"
+        bot_version = ckit_client.marketplace_version_as_str(scenario.persona.persona_marketable_version)
+        output_dir = os.path.abspath(os.path.join(os.getcwd(), "scenario-dumps"))
+        logger.info(f"Scenario output directory: {output_dir}")
         os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, f"{scenario_basename}-{random_id}.yaml")
+
+        happy_path = os.path.join(output_dir, f"{scenario_basename}-v{bot_version}-happy.yaml")
+        with open(happy_path, "w") as f:
+            f.write(trajectory_happy)
+        logger.info(f"exported {happy_path}")
+
         messages4export = ckit_scenario.messages_to_dict_list_for_export(sorted_messages)
-        result_data = {
-            "rating": judge_result.rating,
-            "reason": judge_result.reason,
-            "messages": messages4export,
-        }
-        with open(output_path, "w") as f:
-            f.write(ckit_scenario.yaml_dump_with_multiline(result_data))
-        logger.info(f"Scenario results saved to {output_path}")
+        trajectory_actual = ckit_scenario.yaml_dump_with_multiline({"messages": messages4export})
+        actual_path = os.path.join(output_dir, f"{scenario_basename}-v{bot_version}-actual.yaml")
+        with open(actual_path, "w") as f:
+            f.write(trajectory_actual)
+        logger.info(f"exported {actual_path}")
+
+        await ckit_scenario.bot_scenario_result_upsert(
+            scenario.fclient,
+            ckit_scenario.BotScenarioUpsertInput(
+                btest_marketable_name=scenario.persona.persona_marketable_name,
+                btest_marketable_version_str=bot_version,
+                btest_name=scenario_basename,
+                btest_trajectory_happy=trajectory_happy,
+                btest_trajectory_actual=trajectory_actual,
+                btest_rating_happy=10,
+                btest_rating_actually=judge_result.rating,
+                btest_shaky_human=0,
+                btest_shaky_tool=0,
+            ),
+        )
+        logger.info("Scenario results saved to database")
 
         if scenario.should_cleanup:
             await scenario.cleanup()
