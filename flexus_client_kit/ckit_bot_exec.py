@@ -478,6 +478,7 @@ async def run_happy_trajectory(
 ) -> None:
     max_steps = 30
     ft_id: Optional[str] = None
+    messages4export = []
     try:
         for step in range(max_steps):
             result = await ckit_scenario.scenario_generate_human_message(
@@ -487,40 +488,7 @@ async def run_happy_trajectory(
                 ft_id,
             )
             logger.info(f"Scenario done: {result.scenario_done}, next message: {result.next_human_message!r}")
-
             if result.scenario_done:
-                logger.info("Trajectory completed successfully!")
-                if ft_id:
-                    judge_result = await ckit_scenario.scenario_judge(
-                        scenario.fclient,
-                        trajectory_yaml_path,
-                        ft_id,
-                    )
-                    logger.info(f"Scenario judge rating: {judge_result.rating}/10")
-                    logger.info(f"Scenario judge reason: {judge_result.reason}")
-
-                    my_bot = bc.bots_running.get(scenario.persona.persona_id, None)
-                    if my_bot and ft_id in my_bot.instance_rcx.latest_threads:
-                        my_thread = my_bot.instance_rcx.latest_threads[ft_id]
-                        sorted_messages = sorted(my_thread.thread_messages.values(), key=lambda m: (m.ftm_alt, m.ftm_num))
-                        export_messages = ckit_scenario.messages_to_dict_list_for_export(sorted_messages)
-
-                        scenario_basename = os.path.splitext(os.path.basename(trajectory_yaml_path))[0]
-                        random_id = uuid.uuid4().hex[:8]
-                        output_dir = "./scenarios"
-                        os.makedirs(output_dir, exist_ok=True)
-                        output_path = os.path.join(output_dir, f"{scenario_basename}-{random_id}.yaml")
-
-                        result_data = {
-                            "rating": judge_result.rating,
-                            "reason": judge_result.reason,
-                            "messages": export_messages,
-                        }
-
-                        with open(output_path, "w") as f:
-                            f.write(ckit_scenario.yaml_dump_with_multiline(result_data))
-
-                        logger.info(f"Scenario results saved to {output_path}")
                 break
 
             if not ft_id:
@@ -557,6 +525,7 @@ async def run_happy_trajectory(
                 if my_thread is None:
                     logger.info("WAIT for thread to appear in bot's latest_threads...")
                     continue
+                sorted_messages = sorted(my_thread.thread_messages.values(), key=lambda m: (m.ftm_alt, m.ftm_num))
                 trajectory_msg_count = sum(1 for k, m in my_thread.thread_messages.items() if m.ftm_provenance.get("who_is_asking") == "trajectory_scenario")
                 if trajectory_msg_count < step + 1:
                     logger.info("WAIT for the message the human just posted to appear...")
@@ -565,10 +534,10 @@ async def run_happy_trajectory(
                 # if they are late a little bit, just like the UI works fine based on subscription only)
                 if my_thread.thread_fields.ft_need_user != -1:
                     if my_thread.thread_fields.ft_need_user != 100:
-                        logger.warning("Whoops my_thread.thread_fields.ft_need_user=%d that's crazy, does the thread branch off under my supposedly controlled conditions?")
+                        logger.warning("Whoops my_thread.thread_fields.ft_need_user=%d that's crazy, did the thread branch off under my supposedly controlled conditions?")
                         return
                     break
-                continue  # wait for next the second, silently (no "WAIT waiting for the actual reponse")
+                continue  # wait for next second, silently (no "WAIT waiting for the actual reponse")
             else:
                 logger.info("Timeout after %d seconds, no reponse from model or tools :/")
                 break
@@ -582,11 +551,34 @@ async def run_happy_trajectory(
         logger.info("Scenario is cancelled")
 
     finally:
-        logger.info("Scenario is over, error or not error")
+        logger.info("Scenario is over, problem or not")
         threads_output = await ckit_scenario.scenario_print_threads(scenario.fclient, scenario.fgroup_id)
         logger.info("Scenario is over, threads in fgroup_id=%s:\n%s", scenario.fgroup_id, threads_output)
         # personas_output = await ckit_scenario.scenario_print_personas(scenario.fclient, scenario.fgroup_id)
         # logger.info("Scenario is over, personas in fgroup_id=%s:\n%s", scenario.fgroup_id, personas_output)
+
+        judge_result = await ckit_scenario.scenario_judge(
+            scenario.fclient,
+            trajectory_yaml_path,
+            ft_id,
+        )
+        logger.info(f"Scenario judge rating: {judge_result.rating}/10")
+        logger.info(f"Scenario judge reason: {judge_result.reason}")
+
+        scenario_basename = os.path.splitext(os.path.basename(trajectory_yaml_path))[0]
+        random_id = uuid.uuid4().hex[:8]
+        output_dir = "./scenarios"
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"{scenario_basename}-{random_id}.yaml")
+        messages4export = ckit_scenario.messages_to_dict_list_for_export(sorted_messages)
+        result_data = {
+            "rating": judge_result.rating,
+            "reason": judge_result.reason,
+            "messages": messages4export,
+        }
+        with open(output_path, "w") as f:
+            f.write(ckit_scenario.yaml_dump_with_multiline(result_data))
+        logger.info(f"Scenario results saved to {output_path}")
 
         if scenario.should_cleanup:
             await scenario.cleanup()
