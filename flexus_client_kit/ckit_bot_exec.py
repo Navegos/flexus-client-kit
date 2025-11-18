@@ -6,7 +6,6 @@ import os
 import sys
 import time
 import argparse
-import uuid
 from typing import Dict, List, Optional, Any, Callable, Awaitable, NamedTuple, Union
 
 import gql
@@ -14,7 +13,6 @@ import gql.transport.exceptions
 
 from flexus_client_kit import ckit_client, gql_utils, ckit_service_exec, ckit_kanban, ckit_cloudtool
 from flexus_client_kit import ckit_ask_model, ckit_shutdown, ckit_utils, ckit_bot_query, ckit_scenario
-from flexus_simple_bots import prompts_common
 
 
 logger = logging.getLogger("btexe")
