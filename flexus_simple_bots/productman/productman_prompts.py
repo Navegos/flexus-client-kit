@@ -289,6 +289,7 @@ productman_prompt_default = productman_prompt_base + """
 
 Before you say or do anything, make sure to load all the current ideas from disk using flexus_policy_document().
 When working on an idea, make sure to load all the current hypotheses for the same idea.
+When filling fields for an idea, don't fill answers yourself, they must come from the user.
 """
 
 productman_prompt_criticize_idea = productman_prompt_base + """
