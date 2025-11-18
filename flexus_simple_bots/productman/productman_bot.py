@@ -180,7 +180,7 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
         await pdoc_integration.pdoc_create(path, json.dumps(idea_doc, indent=2), toolcall.fcall_ft_id)
         logger.info(f"Created idea at {path}")
-        return f"✍🏻 {path}\n\n✓ Created idea document"
+        return f"✍🏻 {path}\n\n✓ Created idea document\n\nRemember: don't hallucinate answers, they should come from the user"
 
     @rcx.on_tool_call(HYPOTHESIS_TEMPLATE_TOOL.name)
     async def toolcall_hypothesis_template(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
@@ -273,22 +273,22 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
                 "completed_notified": details.get("survey_status", {}).get("completed_notified", False) or is_completed,
                 "status": survey_status
             }
-            
+
             await ckit_kanban.update_task_details(fclient, task_id, details)
 
     last_survey_update = 0
     survey_update_interval = 300
-    
+
     try:
         while not ckit_shutdown.shutdown_event.is_set():
             await rcx.unpark_collected_events(sleep_if_no_work=10.0)
-            
+
             current_time = time.time()
             if surveymonkey_integration and current_time - last_survey_update > survey_update_interval:
                 if not surveymonkey_integration.tracked_surveys and rcx.latest_tasks:
                     for task in rcx.latest_tasks.values():
                         surveymonkey_integration.track_survey_task(task)
-                
+
                 await surveymonkey_integration.update_active_surveys(fclient, update_task_survey_status)
                 last_survey_update = current_time
 
