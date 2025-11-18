@@ -24,6 +24,7 @@ setup(
         "jsonschema",
         "beautifulsoup4",
         "PyJWT",
+        "pyyaml"
     ],
     extras_require={
         "dev": [
