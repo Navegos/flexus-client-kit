@@ -158,6 +158,7 @@ async def bot_kanban_post_into_inbox(
         )
 
 
+# XXX remove
 async def get_tasks_by_thread(
     client: ckit_client.FlexusClient,
     ft_id: str,
@@ -188,7 +189,7 @@ async def get_tasks_by_thread(
             }"""),
             variable_values={"ft_id": ft_id}
         )
-    
+
     tasks = []
     for task_data in result.get("persona_kanban_tasks_by_thread", []):
         tasks.append(gql_utils.dataclass_from_dict(task_data, FPersonaKanbanTaskOutput))

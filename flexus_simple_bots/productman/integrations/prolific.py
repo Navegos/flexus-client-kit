@@ -88,10 +88,10 @@ Examples:
             "countries": ["US", "UK", "CA"]
         }
     })
-    
+
     # Publish after user approval
     prolific(op="publish", args={"study_id": "abc123"})
-    
+
     # Check status
     prolific(op="status", args={"study_id": "abc123"})
 """
@@ -264,7 +264,7 @@ Completion Code: {completion_code}
                     error_body = await resp.text()
                     return f"Error getting study details: {error_body}"
                 study_details = await resp.json()
-            
+
             survey_url = study_details.get("external_study_url", "")
             total_participants = study_details.get("total_available_places", 0)
             survey_id = ""
@@ -295,10 +295,11 @@ Monitor progress with 'get_prolific_study_status'"""
         if survey_id and toolcall.fcall_ft_id and self.fclient:
             from flexus_client_kit import ckit_kanban
             import json
-            
+
             try:
+                # XXX use rcx.tasks
                 tasks = await ckit_kanban.get_tasks_by_thread(self.fclient, toolcall.fcall_ft_id)
-                
+
                 for task in tasks:
                     task_details = task.ktask_details if isinstance(task.ktask_details, dict) else json.loads(task.ktask_details)
                     task_details["survey_id"] = survey_id
@@ -310,7 +311,7 @@ Monitor progress with 'get_prolific_study_status'"""
                         "last_checked": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "completed_notified": False
                     }
-                    
+
                     await ckit_kanban.update_task_details(self.fclient, task.ktask_id, task_details)
                     result += f"\n\n📋 Updated task {task.ktask_id} with survey tracking info"
             except Exception as e:
