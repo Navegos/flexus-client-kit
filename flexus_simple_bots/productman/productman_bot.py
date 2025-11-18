@@ -230,6 +230,7 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             first_calls=["null"],
             title=[f"Verifying {path.split('/')[-1]}"],
             fcall_id=toolcall.fcall_id,
+            skill="verify_idea",
         )
         return "WAIT_SUBCHATS"
 

@@ -148,14 +148,14 @@ async def discord_capture_test(setup: ckit_scenario.ScenarioSetup, discord_bot, 
     http = await discord_bot.fclient.use_http()
     async with http as h:
         r = await h.execute(
-            gql.gql("""mutation BotActivateTest($who_is_asking:String!, $persona_id:String!, $first_question:String!, $first_calls:String!, $title:String!, $activation_type:String!){ bot_activate(who_is_asking:$who_is_asking, persona_id:$persona_id, first_question:$first_question, first_calls:$first_calls, title:$title, activation_type:$activation_type){ ft_id }}"""),
+            gql.gql("""mutation BotActivateTest($who_is_asking:String!, $persona_id:String!, $first_question:String!, $first_calls:String!, $title:String!, $skill:String!){ bot_activate(who_is_asking:$who_is_asking, persona_id:$persona_id, first_question:$first_question, first_calls:$first_calls, title:$title, skill:$skill){ ft_id }}"""),
             variable_values={
                 "who_is_asking": "fi_discord_test",
                 "persona_id": discord_bot.rcx.persona.persona_id,
                 "first_question": msg,
                 "first_calls": "[]",
                 "title": "capture test",
-                "activation_type": "default",
+                "skill": "default",
             }
         )
     ft_id = r["bot_activate"]["ft_id"]

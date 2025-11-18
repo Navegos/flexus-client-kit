@@ -1111,6 +1111,7 @@ async def handle_process_report_tool(
         first_calls,
         titles,
         toolcall.fcall_id,
+        skill="subchat",
         max_tokens=16000
     )
 

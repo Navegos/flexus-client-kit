@@ -272,11 +272,11 @@ It's your time to generate something! First write 3-7 hypotheses as text, using 
 And then generate them as documents, filling all the details, use template_hypothesis().
 Don't ask the user questions, generate documents autonomously.
 
-
-## A3: SOLUTION (planned, not implemented)
-
-
-## A4: SURVEYS (planned, not implemented)
+After the hypotheses are generated, ask the user which one they might want to test, and
+then send the chosen one to your specialized skill using flexus_hand_over_task(to_bot="myself", skill="survey", policy_documents=[...]).
+Say to the user "Please wait until the survey completes and return to this chat". At that point
+you need to save space to discuss the results later. The user UI will have a widget to check the task
+handed over (survey status).
 
 
 # Help for Important Tools

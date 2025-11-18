@@ -105,9 +105,9 @@ bot_bug_report(op='list_reported_bugs', args={'bot_name': 'Frog'})
 
 TOOLS = [
     BOSS_A2A_RESOLUTION_TOOL,
-    BOSS_SETUP_COLLEAGUES_TOOL,
+    # BOSS_SETUP_COLLEAGUES_TOOL,
     THREAD_MESSAGES_PRINTED_TOOL,
-    BOT_BUG_REPORT_TOOL,
+    # BOT_BUG_REPORT_TOOL,
     fi_mongo_store.MONGO_STORE_TOOL,
     fi_pdoc.POLICY_DOCUMENT_TOOL
 ]
@@ -154,6 +154,7 @@ async def handle_setup_colleagues(fclient: ckit_client.FlexusClient, toolcall: c
 
     if op == "update" and not toolcall.confirmed_by_human:
         http = await fclient.use_http()
+        # XXX try catch here?
         async with http as h:
             r = await h.execute(
                 gql.gql("""mutation BossSetupColleagues($bot_name: String!, $op: String!, $key: String) {
@@ -189,7 +190,11 @@ async def handle_setup_colleagues(fclient: ckit_client.FlexusClient, toolcall: c
             )
             return r.get("boss_setup_colleagues", f"Error: Failed to {op} setup for {bot_name}")
         except gql.transport.exceptions.TransportQueryError as e:
-            return f"GraphQL Error: {e}"
+            # FIXME handler does not support apikey/session for regular user to debug
+            # 20251118 09:43:22.373 super [WARN] ⚠️  127.0.0.1 someone introduces itself as 'boss_20003_solar_root' and wants to access /v1/jailed-bot, denied; tries to use super_password=bad-superu... current_state=[curr-secre..., prev-secre...]
+            # 20251118 09:43:22.373 exces [INFO] 127.0.0.1 403 /boss_setup_colleagues 0.000s: Whoops your key didn't work (1).
+            logger.exception("handle_setup_colleagues error")
+            return f"handle_setup_colleagues problem: {e}"
 
 
 async def handle_thread_messages(fclient: ckit_client.FlexusClient, model_produced_args: Dict[str, Any]) -> str:
@@ -323,17 +328,17 @@ async def boss_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.R
     async def toolcall_a2a_resolution(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
         return await handle_a2a_resolution(fclient, model_produced_args)
 
-    @rcx.on_tool_call(BOSS_SETUP_COLLEAGUES_TOOL.name)
-    async def toolcall_colleague_setup(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
-        return await handle_setup_colleagues(fclient, toolcall, model_produced_args)
+    # @rcx.on_tool_call(BOSS_SETUP_COLLEAGUES_TOOL.name)
+    # async def toolcall_colleague_setup(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+    #     return await handle_setup_colleagues(fclient, toolcall, model_produced_args)
 
     @rcx.on_tool_call(THREAD_MESSAGES_PRINTED_TOOL.name)
     async def toolcall_thread_messages_printed(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
         return await handle_thread_messages(fclient, model_produced_args)
 
-    @rcx.on_tool_call(BOT_BUG_REPORT_TOOL.name)
-    async def toolcall_bot_bug_report(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
-        return await handle_bot_bug_report(fclient, rcx.persona.ws_id, model_produced_args)
+    # @rcx.on_tool_call(BOT_BUG_REPORT_TOOL.name)
+    # async def toolcall_bot_bug_report(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+    #     return await handle_bot_bug_report(fclient, rcx.persona.ws_id, model_produced_args)
 
     @rcx.on_tool_call(fi_mongo_store.MONGO_STORE_TOOL.name)
     async def toolcall_mongo_store(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:

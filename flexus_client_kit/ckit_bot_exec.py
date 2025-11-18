@@ -422,9 +422,9 @@ async def subscribe_and_produce_callbacks(
                         logger.info("Task %s is about persona=%s which is not running here." % (task.ktask_id, persona_id))
                 elif upd.news_action == "DELETE":
                     handled = True
-                    persona_id = upd.news_payload_task.persona_id
-                    if persona_id in bc.bots_running and upd.news_payload_id in bc.bots_running[persona_id].instance_rcx.latest_tasks:
-                        del bc.bots_running[persona_id].instance_rcx.latest_tasks[upd.news_payload_id]
+                    for p in bc.bots_running.values():
+                        if upd.news_payload_id in p.instance_rcx.latest_tasks:
+                            del p.instance_rcx.latest_tasks[upd.news_payload_id]
 
             elif upd.news_action == "INITIAL_UPDATES_OVER":
                 if len(bc.bots_running) == 0:
@@ -507,7 +507,7 @@ async def run_happy_trajectory(
                     client=scenario.fclient,
                     who_is_asking="trajectory_scenario",
                     persona_id=scenario.persona.persona_id,
-                    activation_type="default",
+                    skill="default",   # XXX add to parameters
                     first_question=result.next_human_message,
                     title="Trajectory Test",
                 )

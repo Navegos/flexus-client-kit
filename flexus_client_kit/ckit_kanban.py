@@ -20,6 +20,7 @@ class FPersonaKanbanTaskOutput:
     persona_id: str
     ktask_id: str
     ktask_title: str
+    ktask_skill: str
     ktask_inbox_ts: float
     ktask_inbox_provenance: Any
     ktask_daily_timekey: str

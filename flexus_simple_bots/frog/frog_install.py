@@ -127,7 +127,7 @@ async def install(
                 fexp_allow_tools="",
                 fexp_app_capture_tools=bot_internal_tools,
             )),
-            ("subchat", ckit_bot_install.FMarketplaceExpertInput(
+            ("huntmode", ckit_bot_install.FMarketplaceExpertInput(
                 fexp_name="frog_subchat",
                 fexp_system_prompt=frog_prompts.frog_setup,
                 fexp_python_kernel=FROG_SUBCHAT_LARK,
