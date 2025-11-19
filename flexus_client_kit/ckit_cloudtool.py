@@ -115,11 +115,14 @@ async def call_python_function_and_save_result(
     try:
         args = json.loads(call.fcall_arguments)
         content, prov = await the_python_function(fclient, call, args)
-        # NOTE: here we have 2 allowed variants for output
+        # NOTE: here we have 3 allowed variants for output
         # 1. (str, str) - immediate answer from handler
         # 2. (None, None) - delayed cloudtool_post_result
+        # 3. ("ALREADY_FAKED_RESULT", "") - scenario already posted fake result
         assert (isinstance(content, str) and isinstance(prov, str)) or (content is None and prov is None)
         logger.info("/%s %s:%03d:%03d %+d result=%s", call.fcall_id, call.fcall_ft_id, call.fcall_ftm_alt, call.fcall_called_ftm_num, call.fcall_call_n, content[:30] if content is not None else "delayed")
+        if content == "ALREADY_FAKED_RESULT":
+            return
     except NeedsConfirmation as e:
         logger.info("%s needs human confirmation: %s", call.fcall_id, e.confirm_explanation)
         try:
@@ -311,7 +314,7 @@ async def run_cloudtool_service_real(
                     if await ckit_shutdown.wait(1):
                         break
                 call = gql_utils.dataclass_from_dict(r["cloudtool_wait_for_call"], FCloudtoolCall)
-                logger.info("%s %s:%03d:%03d %+d %s(%s)", call.fcall_id, call.fcall_ft_id, call.fcall_ftm_alt, call.fcall_called_ftm_num, call.fcall_call_n, call.fcall_name, str(call.fcall_arguments)[:20])
+                logger.info(" %s %s:%03d:%03d %+d %s(%s)", call.fcall_id, call.fcall_ft_id, call.fcall_ftm_alt, call.fcall_called_ftm_num, call.fcall_call_n, call.fcall_name, str(call.fcall_arguments)[:20])
 
                 t = asyncio.create_task(call_python_function_and_save_result(call, the_python_function, service_name, fclient))
                 t.add_done_callback(lambda t, c = call: workset_done(t, c))
