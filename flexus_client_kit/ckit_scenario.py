@@ -3,17 +3,12 @@ import logging
 import argparse
 import yaml
 import dataclasses
-import inspect
-import os
 from dataclasses import dataclass
-from typing import Optional, Dict, List, Union, Any, TYPE_CHECKING
+from typing import Optional, Dict, List, Union, Any
 
 import gql
 
-from flexus_client_kit import gql_utils, ckit_bot_install, ckit_client, ckit_ask_model, ckit_kanban, ckit_bot_query
-
-if TYPE_CHECKING:
-    from flexus_client_kit import ckit_cloudtool, ckit_bot_exec
+from flexus_client_kit import gql_utils, ckit_bot_install, ckit_client, ckit_ask_model, ckit_kanban, ckit_bot_query, ckit_cloudtool
 
 logger = logging.getLogger("cksce")
 
@@ -174,15 +169,10 @@ def dump_thread_messages_to_yaml(messages: list) -> str:
 
 async def scenario_generate_tool_result_via_model(
     fclient: ckit_client.FlexusClient,
-    toolcall: "ckit_cloudtool.FCloudtoolCall",
-    rcx: "ckit_bot_exec.RobotContext",
+    toolcall: ckit_cloudtool.FCloudtoolCall,
+    happy_yaml: str,
+    tool_handler_source_code: str,
 ) -> str:
-    caller_frame = inspect.stack()[1]
-    source_file_path = os.path.abspath(caller_frame.filename)
-
-    with open(source_file_path) as f:
-        tool_handler_source_code = f.read()
-
     http_client = await fclient.use_http()
     http_client.execute_timeout = 120
     async with http_client as http:
@@ -204,7 +194,7 @@ async def scenario_generate_tool_result_via_model(
                 "fcall_id": toolcall.fcall_id,
                 "fcall_untrusted_key": toolcall.fcall_untrusted_key,
                 "tool_handler_source_code": tool_handler_source_code,
-                "happy_trajectory": rcx.running_happy_yaml,
+                "happy_trajectory": happy_yaml,
             },
         )
     return "ALREADY_POSTED_RESULT"
