@@ -78,7 +78,8 @@ class RobotContext:
         self.latest_tasks: Dict[str, ckit_kanban.FPersonaKanbanTaskOutput] = dict()
         self.created_ts = time.time()
         self.workdir = "/tmp/bot_workspace/%s/" % p.persona_id
-        self.scenario_trajectory = ""
+        self.running_test_scenario = False
+        self.running_happy_yaml = ""
         os.makedirs(self.workdir, exist_ok=True)
 
     def on_updated_message(self, handler: Callable[[ckit_ask_model.FThreadMessageOutput], Awaitable[None]]):
@@ -256,7 +257,8 @@ class BotsCollection:
         marketable_version: int,
         inprocess_tools: List[ckit_cloudtool.CloudTool],
         bot_main_loop: Callable[[ckit_client.FlexusClient, RobotContext], Awaitable[None]],
-        scenario_trajectory: str = "",
+        running_test_scenario: bool = False,
+        running_happy_yaml: str = "",
     ):
         self.fgroup_id = fgroup_id
         self.marketable_name = marketable_name
@@ -265,7 +267,8 @@ class BotsCollection:
         self.bot_main_loop = bot_main_loop
         self.bots_running: Dict[str, BotInstance] = {}
         self.thread_tracker: Dict[str, ckit_bot_query.FThreadWithMessages] = {}
-        self.scenario_trajectory = scenario_trajectory
+        self.running_test_scenario = running_test_scenario
+        self.running_happy_yaml = running_happy_yaml
 
 
 async def subscribe_and_produce_callbacks(
@@ -315,7 +318,8 @@ async def subscribe_and_produce_callbacks(
                             del bc.bots_running[persona_id]
                     if persona_id not in bc.bots_running:
                         rcx = RobotContext(fclient, upd.news_payload_persona)
-                        rcx.scenario_trajectory = bc.scenario_trajectory
+                        rcx.running_test_scenario = bc.running_test_scenario
+                        rcx.running_happy_yaml = bc.running_happy_yaml
                         bc.bots_running[persona_id] = BotInstance(
                             fclient=fclient,
                             atask=asyncio.create_task(crash_boom_bang(fclient, rcx, bc.bot_main_loop)),
@@ -640,10 +644,12 @@ async def run_bots_in_this_group(
 ) -> None:
     scenario = None
     scenario_task = None
-    scenario_trajectory = ""
+    running_test_scenario = False
+    running_happy_yaml = ""
     if scenario_fn:
         with open(scenario_fn) as f:
-            scenario_trajectory = f.read()
+            running_happy_yaml = f.read()
+        running_test_scenario = True
         scenario = ckit_scenario.ScenarioSetup(service_name="trajectory_replay")
     if fgroup_id == "TMP":
         await scenario.create_group_and_hire_bot(
@@ -661,7 +667,8 @@ async def run_bots_in_this_group(
         marketable_version=marketable_version,
         inprocess_tools=inprocess_tools,
         bot_main_loop=bot_main_loop,
-        scenario_trajectory=scenario_trajectory,
+        running_test_scenario=running_test_scenario,
+        running_happy_yaml=running_happy_yaml,
     )
     if scenario_fn:
         scenario_task = asyncio.create_task(run_happy_trajectory(bc, scenario, scenario_fn), name="human_emulator")

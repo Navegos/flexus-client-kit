@@ -47,7 +47,7 @@ async def admonster_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_e
     ad_account_id = setup.get("ad_account_id", fi_linkedin.AD_ACCOUNT_ID)
 
     linkedin_integration = None
-    if (LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET) or rcx.scenario_trajectory:
+    if (LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET) or rcx.running_test_scenario:
         try:
             linkedin_integration = fi_linkedin.IntegrationLinkedIn(
                 fclient=fclient,

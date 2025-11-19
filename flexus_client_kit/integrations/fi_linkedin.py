@@ -147,7 +147,7 @@ class IntegrationLinkedIn:
         self.problems = []
         self._campaign_groups_cache = None
         self._campaigns_cache = None
-        self.is_fake = bool(self.rcx.scenario_trajectory)
+        self.is_fake = self.rcx.running_test_scenario
 
     async def called_by_model(self, toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Optional[Dict[str, Any]]) -> str:
         if not model_produced_args:

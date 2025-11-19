@@ -204,7 +204,7 @@ async def scenario_generate_tool_result_via_model(
                 "fcall_id": toolcall.fcall_id,
                 "fcall_untrusted_key": toolcall.fcall_untrusted_key,
                 "tool_handler_source_code": tool_handler_source_code,
-                "happy_trajectory": rcx.scenario_trajectory,
+                "happy_trajectory": rcx.running_happy_yaml,
             },
         )
     return "ALREADY_POSTED_RESULT"
