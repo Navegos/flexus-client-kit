@@ -353,12 +353,8 @@ async def run_cloudtool_service(
             if ckit_shutdown.shutdown_event.is_set():
                 break
             logger.info("got disconnected, will connect again in 60s")
-            if await ckit_shutdown.wait(60):
-                break
-            continue
+            await ckit_shutdown.wait(60)
 
         except Exception as e:
             logger.error("caught exception %s: %s" % (type(e).__name__, e), exc_info=e)
-            if await ckit_shutdown.wait(60):
-                break
-            continue
+            await ckit_shutdown.wait(60)
