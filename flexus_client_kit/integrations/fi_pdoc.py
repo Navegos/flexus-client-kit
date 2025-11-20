@@ -69,7 +69,7 @@ Typical paths:
 
 You are working within a UI that lets the user to edit any policy documents mentioned, bypassing your
 function calls, kind of like IDE lets the user to change the source files.
-The UI reacts to tool results that have a line "✍🏻/path/to/document" to give user a link to that document to
+The UI reacts to tool results that have a line "✍️/path/to/document" to give user a link to that document to
 view or edit. Some rules for sitting within this UI:
 - Never dump json onto the user, the user is unlikely to be a software engineer, and they see a user-friendly version of the content anyway in the UI.
 - Don't mention document paths, for the same reason, read the files instead and write a table with available ideas or hypothesis, using human readable text.
@@ -142,7 +142,7 @@ class IntegrationPdoc:
                     return await ckit_scenario.scenario_generate_tool_result_via_model(self.fclient, toolcall, open(__file__).read())
                 result = await self.pdoc_cat(p)
                 if op == "activate":
-                    r += f"✍🏻 {result.path}\n\n"
+                    r += f"✍️ {result.path}\n\n"
                 else:
                     r += f"📄 {result.path}\n\n"
                 r += json.dumps(result.pdoc_content, indent=2, ensure_ascii=False)
@@ -165,10 +165,10 @@ class IntegrationPdoc:
 
                 if op == "create":
                     await self.pdoc_create(p, text, toolcall.fcall_ft_id)
-                    r += f"✍🏻 {p}\n\n✓ Policy document created"
+                    r += f"✍️ {p}\n\n✓ Policy document created"
                 else:
                     await self.pdoc_overwrite(p, text, toolcall.fcall_ft_id)
-                    r += f"✍🏻 {p}\n\n✓ Policy document updated"
+                    r += f"✍️ {p}\n\n✓ Policy document updated"
 
             elif op == "update_json_text":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")
@@ -181,7 +181,7 @@ class IntegrationPdoc:
                     return await ckit_scenario.scenario_generate_tool_result_via_model(self.fclient, toolcall, open(__file__).read())
 
                 await self.pdoc_update_json_text(p, json_path, text, toolcall.fcall_ft_id)
-                r += f"✍🏻 {p}\n\n✓ Updated {json_path}"
+                r += f"✍️ {p}\n\n✓ Updated {json_path}"
 
             elif op == "cp":
                 p1 = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p1", "")
@@ -193,7 +193,7 @@ class IntegrationPdoc:
                     return await ckit_scenario.scenario_generate_tool_result_via_model(self.fclient, toolcall, open(__file__).read())
 
                 await self.pdoc_cp(p1, p2, toolcall.fcall_ft_id)
-                r += f"✍🏻 {p2}\n\n✓ Copied from {p1}"
+                r += f"✍️ {p2}\n\n✓ Copied from {p1}"
 
             elif op == "rm":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")

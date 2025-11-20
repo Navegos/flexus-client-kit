@@ -187,7 +187,7 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
         await pdoc_integration.pdoc_create(path, json.dumps(idea_doc, indent=2), toolcall.fcall_ft_id)
         logger.info(f"Created idea at {path}")
-        return f"✍🏻 {path}\n\n✓ Created idea document"
+        return f"✍️ {path}\n\n✓ Created idea document"
 
     @rcx.on_tool_call(HYPOTHESIS_TEMPLATE_TOOL.name)
     async def toolcall_hypothesis_template(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
@@ -221,7 +221,7 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
         await pdoc_integration.pdoc_create(path, json.dumps(hypothesis_doc, indent=2), toolcall.fcall_ft_id)
         logger.info(f"Created hypothesis at {path}")
-        return f"✍🏻 {path}\n\n✓ Created hypothesis document for specific customer segment"
+        return f"✍️ {path}\n\n✓ Created hypothesis document for specific customer segment"
 
     @rcx.on_tool_call(VERIFY_IDEA_TOOL.name)
     async def toolcall_verify_idea(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:

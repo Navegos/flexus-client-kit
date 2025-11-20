@@ -108,7 +108,7 @@ messages:
 
       You are working within a UI that lets the user to edit any policy documents mentioned, bypassing your
       function calls, kind of like IDE lets the user to change the source files.
-      The UI reacts to tool results that have a line "✍🏻/path/to/document" to give user a link to that document to
+      The UI reacts to tool results that have a line "✍️/path/to/document" to give user a link to that document to
       view or edit. Some rules for sitting within this UI:
       - Never dump json onto the user, the user is unlikely to be a software engineer, and they see a user-friendly version of the content anyway in the UI.
       - Don't mention document paths, for the same reason, read the files instead and write a table with available ideas or hypothesis, using human readable text.
@@ -232,7 +232,7 @@ messages:
           arguments: '{"op":"help"}'
   - role: tool
     content: |
-      
+
       survey()
           Shows this help.
 
@@ -244,7 +244,7 @@ messages:
           Structure: {"survey": {"meta": {...}, "section01-screening": {"section_title": "...", "question01": {...}}}}
           Use exactly 6 sections: screening, user-profile, problem, current-behavior, impact, concept-validation
           Question types: single_choice, multiple_choice, open_ended, rating_scale, yes_no, likert, nps, dropdown, numeric, date
-          
+
       survey(op="push", args={"survey_draft_path": "/customer-research/idea/hypothesis-survey-draft"})
           Push a survey draft from policy document to SurveyMonkey.
           Returns survey URL and ID.
@@ -253,14 +253,14 @@ messages:
           Fetch all responses for a SurveyMonkey survey and save results.
           Required: survey_id, target_responses
           Automatically saves results to /customer-research/<idea_name>/<hypothesis_name>-survey-results
-          
+
       survey(op="list", args={"idea_name": "..."})
           List all surveys for an idea (drafts and live).
 
       Examples:
           # Create draft
           survey(op="draft", args={
-              "idea_name": "task-tool", 
+              "idea_name": "task-tool",
               "hypothesis_name": "managers",
               "survey_content": {
                   "survey": {
@@ -272,10 +272,10 @@ messages:
                   }
               }
           })
-          
+
           # Push to SurveyMonkey
           survey(op="push", args={"survey_draft_path": "/customer-research/task-tool/managers-survey-draft"})
-          
+
       Survey creation rules.
       RULE #0 — SACRED AND NON-NEGOTIABLE
       Never ask about the future, intentions, or hypotheticals. Ask ONLY about past experience and real actions.
@@ -320,17 +320,17 @@ messages:
       QUESTION RULES
       --------------------------------
 
-      0. Only past experience  
+      0. Only past experience
       - If a question is about the future, intentions, or hypotheticals → rewrite it to the past or remove it.
 
-      1. One question — one idea  
+      1. One question — one idea
       - No double questions or mixed meanings.
 
-      2. All scales are 1–5  
-      - 1 = minimum (e.g. “not at all”, “never”, “no impact”)  
+      2. All scales are 1–5
+      - 1 = minimum (e.g. “not at all”, “never”, “no impact”)
       - 5 = maximum (e.g. “very much”, “very often”, “strong impact”)
 
-      3. ~80% closed questions  
+      3. ~80% closed questions
       Allowed closed types:
       - single choice,
       - multiple choice,
@@ -344,20 +344,20 @@ messages:
       - preferably at the end of the section,
       - only when really needed.
 
-      4. Neutral wording  
+      4. Neutral wording
       - No leading or suggestive phrasing.
       - Do not push toward a specific answer or toward using the product.
 
-      5. No invented facts  
+      5. No invented facts
       - Use only what is in chat history, Canvas, or the hypothesis.
       - If there is not enough data to create a specific question, write:
         “Skip — insufficient data.”
 
-      6. No invented features  
+      6. No invented features
       - Use only solution features explicitly described in the materials.
       - If a feature is not mentioned, it does not exist and cannot be used in questions.
 
-      7. Concept validation only through real experience  
+      7. Concept validation only through real experience
       You may ask only about:
       - whether they used analogs in the past,
       - how they solved this problem before,
@@ -462,7 +462,7 @@ messages:
       ✅ Survey draft created successfully!
 
       📝 Draft saved to: /customer-research/dentist-samples-connection-service/private-practice-dentists-survey-draft
-      ✍🏻/customer-research/dentist-samples-connection-service/private-practice-dentists-survey-draft
+      ✍️/customer-research/dentist-samples-connection-service/private-practice-dentists-survey-draft
 
       📊 Created 21 questions across 6 sections
 
@@ -485,7 +485,7 @@ messages:
       📊 21 questions pushed
 
       📁 Survey monkey raw data: /customer-research/dentist-samples-connection-service/private-practice-dentists-survey-monkey
-      ✍🏻/customer-research/dentist-samples-connection-service/private-practice-dentists-survey-monkey
+      ✍️/customer-research/dentist-samples-connection-service/private-practice-dentists-survey-monkey
     call_id: call_41434952
   - role: assistant
     content: |-
@@ -500,7 +500,7 @@ messages:
       5. **Impact**: Measures how sample access issues affected decisions, time, and product introductions.
       6. **Concept Validation**: Probes prior experiences with similar multi-vendor sample services or barriers.
 
-      **Survey Link**: [Take the Survey](https://www.surveymonkey.com/r/BXDRJP7)  
+      **Survey Link**: [Take the Survey](https://www.surveymonkey.com/r/BXDRJP7)
       (Share this via alternative channels: ADA forums, LinkedIn dental groups, social media platforms, and online dentist communities. Aim for 30+ responses.)
 
       Survey ID: 420708289 (for reference).
@@ -568,7 +568,7 @@ messages:
       - **Total Participants**: 1
       - **Filters**: USA only (age 25-70 implied for professionals; survey screening will confirm dentist status)
 
-      **Study ID**: study_1000  
+      **Study ID**: study_1000
       **Status**: Unpublished (not yet live)
 
       **Cost Estimate**:
@@ -640,7 +640,7 @@ messages:
 
 
       📁 Results saved to: /customer-research/dentist-samples-connection-service/private-practice-dentists-survey-results
-      ✍🏻/customer-research/dentist-samples-connection-service/private-practice-dentists-survey-results
+      ✍️/customer-research/dentist-samples-connection-service/private-practice-dentists-survey-results
 
       🎉 SURVEY COMPLETED! All target responses collected.
       ✅ You should now move the kanban task to DONE state.

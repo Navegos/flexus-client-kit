@@ -53,7 +53,7 @@ survey(op="draft", args={"idea_name": "...", "hypothesis_name": "...", "survey_c
     Structure: {"survey": {"meta": {...}, "section01-screening": {"section_title": "...", "question01": {...}}}}
     Use exactly 6 sections: screening, user-profile, problem, current-behavior, impact, concept-validation
     Question types: single_choice, multiple_choice, open_ended, rating_scale, yes_no, likert, nps, dropdown, numeric, date
-    
+
 survey(op="push", args={"survey_draft_path": "/customer-research/idea/hypothesis-survey-draft"})
     Push a survey draft from policy document to SurveyMonkey.
     Returns survey URL and ID.
@@ -62,14 +62,14 @@ survey(op="responses", args={"survey_id": "123456", "target_responses": 50})
     Fetch all responses for a SurveyMonkey survey and save results.
     Required: survey_id, target_responses
     Automatically saves results to /customer-research/<idea_name>/<hypothesis_name>-survey-results
-    
+
 survey(op="list", args={"idea_name": "..."})
     List all surveys for an idea (drafts and live).
 
 Examples:
     # Create draft
     survey(op="draft", args={
-        "idea_name": "task-tool", 
+        "idea_name": "task-tool",
         "hypothesis_name": "managers",
         "survey_content": {
             "survey": {
@@ -81,10 +81,10 @@ Examples:
             }
         }
     })
-    
+
     # Push to SurveyMonkey
     survey(op="push", args={"survey_draft_path": "/customer-research/task-tool/managers-survey-draft"})
-    
+
 Survey creation rules.
 RULE #0 — SACRED AND NON-NEGOTIABLE
 Never ask about the future, intentions, or hypotheticals. Ask ONLY about past experience and real actions.
@@ -129,17 +129,17 @@ Each question must have:
 QUESTION RULES
 --------------------------------
 
-0. Only past experience  
+0. Only past experience
 - If a question is about the future, intentions, or hypotheticals → rewrite it to the past or remove it.
 
-1. One question — one idea  
+1. One question — one idea
 - No double questions or mixed meanings.
 
-2. All scales are 1–5  
-- 1 = minimum (e.g. “not at all”, “never”, “no impact”)  
+2. All scales are 1–5
+- 1 = minimum (e.g. “not at all”, “never”, “no impact”)
 - 5 = maximum (e.g. “very much”, “very often”, “strong impact”)
 
-3. ~80% closed questions  
+3. ~80% closed questions
 Allowed closed types:
 - single choice,
 - multiple choice,
@@ -153,20 +153,20 @@ Open questions:
 - preferably at the end of the section,
 - only when really needed.
 
-4. Neutral wording  
+4. Neutral wording
 - No leading or suggestive phrasing.
 - Do not push toward a specific answer or toward using the product.
 
-5. No invented facts  
+5. No invented facts
 - Use only what is in chat history, Canvas, or the hypothesis.
 - If there is not enough data to create a specific question, write:
   “Skip — insufficient data.”
 
-6. No invented features  
+6. No invented features
 - Use only solution features explicitly described in the materials.
 - If a feature is not mentioned, it does not exist and cannot be used in questions.
 
-7. Concept validation only through real experience  
+7. Concept validation only through real experience
 You may ask only about:
 - whether they used analogs in the past,
 - how they solved this problem before,
@@ -417,7 +417,7 @@ class IntegrationSurveyMonkey:
 
         result = f"✅ Survey draft created successfully!\n\n"
         result += f"📝 Draft saved to: {pdoc_path}\n"
-        result += f"✍🏻{pdoc_path}\n\n"
+        result += f"✍️{pdoc_path}\n\n"
         result += f"📊 Created {question_count} questions across {section_count} sections\n\n"
         result += f"Please review and edit the questions if needed.\n"
         result += f"Once ready, use create_surveymonkey_survey(survey_draft_path=\"{pdoc_path}\") to push to SurveyMonkey."
@@ -736,7 +736,7 @@ class IntegrationSurveyMonkey:
         result += f"🔗 Survey URL: {survey_url}\n"
         result += f"📊 {len(questions)} questions pushed\n"
         result += f"\n📁 Survey monkey raw data: {result_pdoc_path}\n"
-        result += f"✍🏻{result_pdoc_path}\n"
+        result += f"✍️ {result_pdoc_path}\n"
 
         return result
 
@@ -755,12 +755,12 @@ class IntegrationSurveyMonkey:
     async def _handle_responses(self, toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
         survey_id = args.get("survey_id", "")
         target_responses = args.get("target_responses", 0)
-        
+
         if not survey_id:
             return "Error: survey_id is required"
         if not target_responses or target_responses <= 0:
             return "Error: target_responses is required and must be greater than 0"
-        
+
         idea_name = ""
         hypothesis_name = ""
         if self.pdoc_integration:
@@ -785,7 +785,7 @@ class IntegrationSurveyMonkey:
                             break
             except Exception as e:
                 logger.warning(f"Failed to find survey metadata: {e}")
-        
+
         if not idea_name or not hypothesis_name:
             return f"Error: Could not find survey metadata for survey_id {survey_id}. Make sure the survey was created through this system."
 
@@ -820,7 +820,7 @@ class IntegrationSurveyMonkey:
 
         completion_rate = (len(all_responses) / target_responses * 100) if target_responses > 0 else 0
         is_completed = target_responses > 0 and len(all_responses) >= target_responses
-        
+
         result = f"📊 Survey Responses (Survey ID: {survey_id})\n"
         result += f"Total responses: {len(all_responses)} / {target_responses} ({completion_rate:.1f}%)\n"
         result += f"Status: {'COMPLETED ✅' if is_completed else 'IN_PROGRESS ⏳'}\n"
@@ -837,7 +837,7 @@ class IntegrationSurveyMonkey:
                 "submitted": r.get('date_modified') or r.get('date_created', 'N/A'),
                 "answers": r
             }
-            
+
             result += f"Response #{idx} (ID: {r.get('id', 'N/A')})\n"
             result += f"Status: {r.get('response_status', 'N/A')}\n"
             result += f"Submitted: {r.get('date_modified') or r.get('date_created', 'N/A')}\n\n"
@@ -889,7 +889,7 @@ class IntegrationSurveyMonkey:
                     }
                 }
             }
-            
+
             try:
                 await self.pdoc_integration.pdoc_overwrite(
                     results_path,
@@ -897,10 +897,10 @@ class IntegrationSurveyMonkey:
                     toolcall.fcall_ft_id
                 )
                 result += f"\n📁 Results saved to: {results_path}\n"
-                result += f"✍🏻{results_path}\n\n"
+                result += f"✍️ {results_path}\n\n"
             except Exception as e:
                 result += f"\n⚠️ Failed to save results: {str(e)}\n\n"
-        
+
         if is_completed:
             result += "🎉 SURVEY COMPLETED! All target responses collected.\n"
             result += "✅ You should now move the kanban task to DONE state.\n"
@@ -913,10 +913,10 @@ class IntegrationSurveyMonkey:
     def track_survey_task(self, task):
         if not task.ktask_details:
             return
-        
+
         details = task.ktask_details if isinstance(task.ktask_details, dict) else json.loads(task.ktask_details)
         survey_id = details.get("survey_id")
-        
+
         if survey_id and task.ktask_done_ts == 0:
             if survey_id not in self.tracked_surveys:
                 self.tracked_surveys[survey_id] = {
@@ -931,7 +931,7 @@ class IntegrationSurveyMonkey:
     async def update_active_surveys(self, fclient, update_task_callback):
         if not self.tracked_surveys:
             return
-        
+
         for survey_id, tracking_info in list(self.tracked_surveys.items()):
             try:
                 async with aiohttp.ClientSession() as session:
@@ -943,7 +943,7 @@ class IntegrationSurveyMonkey:
                         if resp.status >= 400:
                             continue
                         survey_data = await resp.json()
-                    
+
                     async with session.get(
                             f"{SM_BASE}/surveys/{survey_id}/responses/bulk",
                             headers=self._headers(),
@@ -953,14 +953,14 @@ class IntegrationSurveyMonkey:
                         if resp.status >= 400:
                             continue
                         response_data = await resp.json()
-                
+
                 survey_status = survey_data.get("response_status", "")
                 is_closed = survey_status in ["closed", "ended"]
                 response_count = response_data.get("total", 0)
                 target_responses = tracking_info["target_responses"]
-                
+
                 is_completed = is_closed or (target_responses > 0 and response_count >= target_responses)
-                
+
                 await update_task_callback(
                     task_id=tracking_info["task_id"],
                     survey_id=survey_id,
@@ -968,10 +968,10 @@ class IntegrationSurveyMonkey:
                     is_completed=is_completed,
                     survey_status=survey_status
                 )
-                
+
                 if is_completed and not tracking_info["completed_notified"] and tracking_info["thread_id"]:
                     message = f"📊 Survey completed!\nSurvey ID: {survey_id}\nTotal responses: {response_count}\nTarget responses: {target_responses}\nStatus: {survey_status}"
-                    
+
                     from flexus_client_kit import ckit_ask_model
                     http = await fclient.use_http()
                     await ckit_ask_model.thread_add_user_message(
@@ -982,12 +982,12 @@ class IntegrationSurveyMonkey:
                         ftm_alt=100,
                         role="user"
                     )
-                    
+
                     tracking_info["completed_notified"] = True
                     logger.info(f"Posted completion message for survey {survey_id}")
-                
+
                 tracking_info["last_response_count"] = response_count
-                
+
             except Exception as e:
                 logger.error(f"Error updating survey {survey_id}: {e}")
 
