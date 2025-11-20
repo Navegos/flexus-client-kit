@@ -106,6 +106,7 @@ async def install(
                 fexp_python_kernel=KAREN_BUDGET_KERNEL,
                 fexp_block_tools="*setup*",
                 fexp_allow_tools="",
+                fexp_inactivity_timeout=600,
                 fexp_app_capture_tools=bot_internal_tools,
             )),
             ("setup", ckit_bot_install.FMarketplaceExpertInput(
