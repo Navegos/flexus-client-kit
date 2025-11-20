@@ -1,3 +1,6 @@
+judge_instructions: |
+  Heavily penalize filling the idea form without user input!
+
 messages:
   - role: user
     content: |
