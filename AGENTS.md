@@ -33,7 +33,7 @@ Example
 -------
 
 Before doing anything, read flexus_simple_bots/frog_*.py as an example to understand how
-bots are built. The Frog bot is specifically desgined as educational, simple bot, to
+bots are built. The Frog bot is specifically designed as an educational, simple bot, to
 showcase tricks available in this system.
 
 
@@ -50,7 +50,7 @@ NAME-256x256.png   -- small avatar picture with either transparent or white back
 Kanban Board
 ------------
 
-Flexus bots designed to perform work, independent of user/admin. The speed that new
+Flexus bots are designed to perform work, independent of user/admin. The speed that new
 tasks are coming is independent of how fast the bot can resolve them. Each bot has a
 kanban board with 'inbox' column that receives new tasks.
 
@@ -70,7 +70,7 @@ The kanban board is visible to the user in Flexus web UI.
 Schedule
 --------
 
-Human can talk to a bot, but mostly this platform is about completing work autonomously.
+Humans can talk to a bot, but mostly this platform is about completing work autonomously.
 
 NAME_install.py has `marketable_schedule` among other things, it typically has SCHED_TASK_SORT to
 start sorting inbox, and SCHED_TODO to get assigned a single task from todo column and work on it.
@@ -86,7 +86,7 @@ Maybe at some point there will be a UI, but today Flexus bots only have chat int
 within Flexus web UI, and you can talk to them via messengers.
 
 Any incoming messages usually go to inbox, or if messenger's thread has captured a
-Flexus thread, then the messsage goes directly into the captured thread in the Flexus
+Flexus thread, then the message goes directly into the captured thread in the Flexus
 database. Messenger's code does the checking on where to put it.
 
 flexus_client_kit/integrations/fi_slack.py    -- slack is full-featured
@@ -128,22 +128,24 @@ Bot Main Loop
 This is typically the first line in bot main loop:
 
 ```
-setup = ckit_bot_exec.official_setup_mixing_procedure(NAME_install.NAME_setup_default, rcx.persona.persona_setup)
+setup = ckit_bot_exec.official_setup_mixing_procedure(NAME_install.NAME_setup_schema, rcx.persona.persona_setup)
 ```
 
-It retuns a dict of all defaults in NAME_setup_default that the user can override by providing
+It returns a dict of all defaults in NAME_setup_schema that the user can override by providing
 their own values in the setup dialog.
 
 ```
 while not ckit_shutdown.shutdown_event.is_set():
-    await rcx.unpark_collected_events(sleep_if_no_work=10.0)  # calls all your rcx.on_* inside and catches exceptions
+    await rcx.unpark_collected_events(sleep_if_no_work=10.0)
 ```
 
-The main loop typically sleeps on rcx.unpark_collected_events() if it has nothing new to process. By having this main loop,
-a bot can integrate any poorly-written software that has no python library or immediate reactions possible,
-and require polling.
+The unpark_collected_events() processes queued events (updated messages, threads, tasks from the database)
+and triggers your @rcx.on_* handlers in a sequential way and catches exceptions. If nothing is queued, it
+sleeps for the specified duration. This pattern lets bots integrate with poorly-written not-coroutine-safe
+external software.
 
-Alternatively, it's possible to sleep on shutdown event:
+Main loop allows to integrate with software that requires polling. Alternatively, it's possible to sleep on
+shutdown event:
 
 ```
 while 1:
@@ -152,37 +154,64 @@ while 1:
         break
 ```
 
-Don't use other ways sleep because it will make quick shutdown impossible.
+Don't use other ways to sleep because it will make quick shutdown impossible.
 
 Wrap your main loop into try..finally and make sure you unsubscribe from any external sources
-of information, because chances are they keep a reference on your objects you have on stack,
-and your bot will have a hard time completely shutting down.
+of information, because chances are they keep an additional reference on objects you have on the stack,
+they will not die on function exit, and your bot will have a hard time completely shutting down.
 
 
-Writing Daily/Weekly/Monthly Reports
-------------------------------------
+Using and Writing Scenarios
+----------------------------
 
-Humans love to see reports, especially about work they didn't have to perform.
+Scenarios are YAML files that represent how a bot should work, a "happy path" to verify behavior and catch regressions.
+After making lots of changes to a bot, run:
 
-Reports can be long or short, but in any case they require a lot of information to
-summarize. This makes it hard for LLMs to continue calling the right functions after
-processing a lot of input, so writing reports is organized using report() call.
+python flexus_simple_bots/my/my_bot.py --scenario flexus_simple_bots/my/default__s1.yaml
 
-System prompt in NAME_prompts.py needs to explain this. It needs to tell the model
-running the bot to complete one section of the report(), restart the chat to take
-care of the next.
+The naming convention is $SKILL$__$SCENARIO$.yaml with double underscore, in this example the skill is "default" and
+the scenario name is "s1".
 
-The report() tool can export a PDF.
+Don't run this for all bots because it's expensive, but it's a good idea to run one scenario of your choosing
+for the one you've just changed.
+
+The result is saved into:
+
+scenario-dumps/my__s1-happy.yaml
+scenario-dumps/my__s1-actual.yaml
+scenario-dumps/my__s1-score.yaml
+
+Note that .gitignore has scenario-dumps/** inside.
+
+How the bot performs is judged by a model on the backend side and saved into -score.yaml. You'll see
+feedback on how the actual trajectory deviates from the happy path and where to make improvements.
+
+When running scenarios, human input is simulated by an LLM. Most tools validate their arguments and then
+call an LLM, some simple tools respond without LLMs. The "shaky" you see in -score.yaml means how
+many times human or tools were simulated without sufficient support in the original happy path,
+in other words LLMs are making stuff up trying to have a similar conversation, so it's a measure of trajectory
+deviation from the original if the score is high.
 
 
-Maintaining Scenarios
----------------------
+Improving System Prompt
+-----------------------
 
+Most likely you'll see very specific feedback, like "question 8 didn't work". This feedback comes from
+human users or automated scenario judge. Both can be very specific in what they don't like, because
+that is what their particular experience was.
 
+IMPORTANT: YOU MUST NOT FIX ANY SPECIFICS.
 
-Helping the User to Setup
--------------------------
+Changes in the system prompt must not go "oh if you see file1 later then respond X". That will
+fix the test essentially by cheating and will not make the bot any better.
 
+Think what the root cause is. How do I fix the personality of this bot so an entire class of
+problems (not this specific one) is no longer possible?
+
+Avoid excessive formatting and excessive emojis. Stick to # ## ### markdown headers, paragraphs, bullet lists.
+Only use emojis for technical reasons in system prompt, for example 💿 and ✍️ have special meaning in Flexus.
+
+Minimize system prompt size. Prefer re-writing of existing language to adding more and more rules.
 
 
 Writing Logs
@@ -195,14 +224,8 @@ Improving on Logs
 
 
 
-Testing Changes
----------------
-
-
-
 Writing a New Bot
 -----------------
-
 
 
 
@@ -250,7 +273,7 @@ my_func(
     6,
 )
 
-Notice the trailing commas and indent independent of brackets position on the previous line.
+Notice the trailing commas and indent independent of bracket position on the previous line.
 
 For imports, prefer `import xxx` and `xxx.f()` over `from xxx import f` and `f()`. The goal here is to make code locally
 readable, so you know where "f" comes from. This rule applies to Flexus own modules and libraries it uses, but does not
