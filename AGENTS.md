@@ -50,7 +50,7 @@ NAME-256x256.png   -- small avatar picture with either transparent or white back
 Kanban Board
 ------------
 
-Flexus bots are designed to perform work, independent of user/admin. The speed that new
+Flexus bots are designed to perform work, independent of user/admin. The speed at which new
 tasks are coming is independent of how fast the bot can resolve them. Each bot has a
 kanban board with 'inbox' column that receives new tasks.
 
@@ -202,7 +202,7 @@ that is what their particular experience was.
 
 IMPORTANT: YOU MUST NOT FIX ANY SPECIFICS.
 
-Changes in the system prompt must not go "oh if you see file1 later then respond X". That will
+Changes in the system prompt must not say "oh if you see file1 later then respond X". That will
 fix the test essentially by cheating and will not make the bot any better.
 
 Think what the root cause is. How do I fix the personality of this bot so an entire class of
@@ -212,6 +212,8 @@ Avoid excessive formatting and excessive emojis. Stick to # ## ### markdown head
 Only use emojis for technical reasons in system prompt, for example 💿 and ✍️ have special meaning in Flexus.
 
 Minimize system prompt size. Prefer re-writing of existing language to adding more and more rules.
+
+Iterate making small changes and running the scenarios again.
 
 
 Writing Logs
@@ -240,7 +242,7 @@ Don't write docstrings. Docstrings are silly, unless you are explaining somethin
 
 Prioritize code simplicity. Simplicity beats docstrings every time.
 
-Don't create temporary variables for no reason, if you can easily inline the value to whatever it needs it, do it.
+Don't create temporary variables for no reason, if you can easily inline the value to whatever needs it, do it.
 
 Don't split into many lines things that can be more readable in just one that is not super long.
 

@@ -1,5 +1,6 @@
 judge_instructions: |
   Heavily penalize filling the idea form without user input!
+  The number of hypotheses does not matter much, it's two in the happy path to keep the example simple.
 
 messages:
   - role: user
