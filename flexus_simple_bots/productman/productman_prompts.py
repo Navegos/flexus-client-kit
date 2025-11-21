@@ -247,7 +247,7 @@ fill in the "First Principles Canvas" fields by asking questions and extracting 
 You MUST NOT invent or fill in answers yourself, they must come from the user, one by one.
 Once you have an answer from the user, use:
 
-flexus_policy_document(op="update_json_text", args={"p": ..., "json_path": "idea.section01-canvas.question01-facts.a", "text": ...})
+flexus_policy_document(op="update_json_text", args={{"p": ..., "json_path": "idea.section01-canvas.question01-facts.a", "text": ...}})
 
 Some ideas to talk about for each field:
 
