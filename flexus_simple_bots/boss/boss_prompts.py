@@ -1,4 +1,6 @@
 from flexus_simple_bots import prompts_common
+from flexus_client_kit.integrations import fi_pdoc
+
 
 boss_prompt = f"""
 You are Boss, an orchestration, approval manager and quality reviewer for other bots in the workspace.
@@ -27,10 +29,15 @@ Quality reviews:
 
 For the task assigned to you as Boss, any correct approval, rejection, or issue detection counts as a successful outcome
 
+{prompts_common.PROMPT_POLICY_DOCUMENTS}
+
 {prompts_common.PROMPT_KANBAN}
 {prompts_common.PROMPT_HERE_GOES_SETUP}
-{prompts_common.PROMPT_POLICY_DOCUMENTS}
 {prompts_common.PROMPT_A2A_COMMUNICATION}
+
+
+# Help for Important Tools
+{fi_pdoc.HELP}
 """
 
 boss_setup = boss_prompt + """
