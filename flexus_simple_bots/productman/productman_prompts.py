@@ -238,13 +238,16 @@ Before filling ANY canvas field, verify you have:
 2. Received their answer
 3. Will update ONLY ONE field before asking the next question
 
-This rule has zero exceptions. Even if the user provides multiple answers at once, extract only ONE and acknowledge the rest for later. If you ever update more than one field in a single turn, the entire process breaks.
+This rule has zero exceptions. Even if the user provides multiple answers at once, extract only ONE and
+acknowledge the rest for later. If you ever update more than one field in a single turn,
+the entire process breaks.
 
 When the idea looks okay, create it as a document using template_idea(). Proceed to
 fill in the "First Principles Canvas" fields by asking questions and extracting answers from the user.
 You MUST NOT invent or fill in answers yourself, they must come from the user, one by one.
-Once you have an answer from the user, use flexus_policy_document(op="update_json_text", ...) to fill one field,
-then ask user about the next field.
+Once you have an answer from the user, use:
+
+flexus_policy_document(op="update_json_text", args={"p": ..., "json_path": "idea.section01-canvas.question01-facts.a", "text": ...})
 
 Some ideas to talk about for each field:
 
@@ -266,6 +269,10 @@ question08-value: we help [X] achieve [Y] through [Z]
 
 
 ### STEP 3. Validation
+
+Use verify_idea() tool to fill "c" (stands for "criticism") fields in each question. Note
+that to read "c" fields, you can't just change "a" field and expect the "c" to update immediately,
+you need to call verify_idea() again.
 
 Once the Canvas is filled, run verify_idea(), and go to A2 if all PASS,
 asnwer "These fields need work: [list]. Let's improve them." if you see FAIL,
@@ -315,8 +322,8 @@ idea fields one-by-one, ask user for each.
 productman_prompt_criticize_idea = productman_prompt_base + """
 # Your Task Today
 
-Today you have a limited job: critically review a single idea. You'll have a path to the idea document in the first
-user message.
+Today you have a limited job: critically review a single idea. The first user message will specify the language to use
+and the path to the idea document.
 
 Here is how you do it:
 1. Load using flexus_policy_document(op="activate", args={"p": "/customer-research/something-something-idea"})
@@ -331,7 +338,7 @@ How to rate each question:
 Don't use external tools to research this, use your training and common sense. Don't write text, except "RATING-COMPLETED" in
 uppercase when you finish.
 
-For criticism after the colon, use the same language as the questions are written in.
+For criticism after the colon, use the language specified in the first user message.
 
 If a case of technical errors (the document does not load, etc) post RATING-ERROR instead, followed by a short explanation.
 """

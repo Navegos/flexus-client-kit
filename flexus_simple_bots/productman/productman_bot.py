@@ -73,8 +73,12 @@ VERIFY_IDEA_TOOL = ckit_cloudtool.CloudTool(
                 "type": "string",
                 "description": "Path to the idea document to verify, e.g. '/customer-research/unicorn-horn-car-idea'"
             },
+            "language": {
+                "type": "string",
+                "description": "Language for comments (e.g. 'English', 'Spanish', 'French'), should be the same as you are talking to the user in."
+            },
         },
-        "required": ["path"],
+        "required": ["path", "language"],
     },
 )
 
@@ -226,8 +230,11 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
     @rcx.on_tool_call(VERIFY_IDEA_TOOL.name)
     async def toolcall_verify_idea(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
         path = model_produced_args.get("path", "")
+        language = model_produced_args.get("language", "")
         if not path:
             return "Error: path required"
+        if not language:
+            return "Error: language required"
         if not path.startswith("/customer-research/"):
             return "Error: path must start with /customer-research/"
 
@@ -238,9 +245,9 @@ async def productman_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             client=fclient,
             who_is_asking="productman_verify_idea",
             persona_id=rcx.persona.persona_id,
-            first_question=[f"Rate this idea document: {path}"],
+            first_question=[f"Rate this idea document in {language}: {path}"],
             first_calls=["null"],
-            title=[f"Verifying {path.split('/')[-1]}"],
+            title=[f"Verifying {path.split('/')[-1]} ({language})"],
             fcall_id=toolcall.fcall_id,
             skill="verify_idea",
         )
