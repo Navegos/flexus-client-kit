@@ -517,7 +517,6 @@ async def run_happy_trajectory(
 
     max_steps = 30
     ft_id: Optional[str] = None
-    messages4export = []
     try:
         assert "__" in skill__scenario
         skill = skill__scenario.split("__")[0]
@@ -543,6 +542,7 @@ async def run_happy_trajectory(
                     first_question=result.next_human_message,
                     title="Trajectory Test",
                     ft_btest_name=skill__scenario,
+                    model=scenario.explicit_model,
                 )
                 logger.info(f"Scenario thread {ft_id}")
             else:
@@ -557,12 +557,20 @@ async def run_happy_trajectory(
                 )
 
             wait_secs = 120
-            for _ in range(wait_secs):
-                await asyncio.sleep(1)
+            start_time = time.time()
+            while time.time() - start_time < wait_secs:
                 my_bot = bc.bots_running.get(scenario.persona.persona_id, None)
                 if my_bot is None:
                     logger.info("WAIT for bot to initialize...")
+                    if await ckit_shutdown.wait(1):
+                        break
                     continue
+                try:
+                    await asyncio.wait_for(my_bot.instance_rcx._parked_anything_new.wait(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    pass
+                if ckit_shutdown.shutdown_event.is_set():
+                    break
                 if not my_bot.instance_rcx._completed_initial_unpark:
                     logger.info("WAIT for bot to complete initial unpark...")
                     continue
@@ -576,7 +584,7 @@ async def run_happy_trajectory(
                     if m.ftm_role == "user" and m.ftm_provenance.get("who_is_asking") == "trajectory_scenario"
                 )
                 if trajectory_msg_count < step + 1:
-                    logger.info("WAIT for the message the human just posted to appear...")
+                    # logger.info("WAIT for the message the human just posted to appear...")
                     continue
                 # Cool now we can believe my_thread.thread_fields because async notifications sent here are not crazy late (and it's fine
                 # if they are late a little bit, just like the UI works fine based on subscription only)
@@ -587,7 +595,7 @@ async def run_happy_trajectory(
                     break
                 continue  # wait for next second, silently (no "WAIT waiting for the actual reponse")
             else:
-                logger.info("Timeout after %d seconds, no reponse from model or tools :/", wait_secs)
+                logger.error("Timeout after %d seconds, no reponse from model or tools :/", wait_secs)
                 break
 
             continue  # post the next human message
