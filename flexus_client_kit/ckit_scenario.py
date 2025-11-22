@@ -270,6 +270,7 @@ class ScenarioSetup:
     def __init__(self, service_name: str = "test_scenario"):
         parser = argparse.ArgumentParser()
         parser.add_argument("--no-cleanup", action="store_true", help="Skip cleanup of test group")
+        parser.add_argument("--model", type=str, default="")
         args, _ = parser.parse_known_args()
 
         self.fclient = ckit_client.FlexusClient(service_name=service_name)
@@ -278,6 +279,7 @@ class ScenarioSetup:
         self.persona: Optional[ckit_bot_query.FPersonaOutput] = None
         self.ws: Optional[ckit_client.FWorkspaceOutput] = None
         self.should_cleanup = not args.no_cleanup
+        self.explicit_model = args.model
 
     async def create_group_and_hire_bot(
         self,
