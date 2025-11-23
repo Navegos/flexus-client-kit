@@ -677,10 +677,10 @@ async def run_happy_trajectory(
                 f"Actual trajectory rating: {judge_result.rating_actually}/10\n"
                 f"Actual trajectory feedback: {judge_result.feedback_actually}"
                 f"    Cost breakdown:\n"
-                f"        judge: \033[96m{('%0.2f' % (cost_judge / 1e6))}\033[0m coins\n"
-                f"        human: \033[93m{('%0.2f' % (cost_human / 1e6))}\033[0m coins\n"
-                f"        tools: \033[95m{('%0.2f' % (cost_tools / 1e6))}\033[0m coins\n"
-                f"        assistant: \033[92m{('%0.2f' % (cost_assistant / 1e6))}\033[0m coins\n"
+                f"        judge: \033[93m${('%0.2f' % (cost_judge / 1e6))}\033[0m\n"
+                f"        human: \033[93m${('%0.2f' % (cost_human / 1e6))}\033[0m\n"
+                f"        tools: \033[93m${('%0.2f' % (cost_tools / 1e6))}\033[0m\n"
+                f"        assst: \033[93m${('%0.2f' % (cost_assistant / 1e6))}\033[0m\n"
                 f"    Stop reason: \033[97m{stop_reason}\033[0m\n"
             )
             logger.info(f"Summary:\n{cost_stop_output}")

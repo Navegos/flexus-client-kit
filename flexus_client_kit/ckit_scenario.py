@@ -251,7 +251,8 @@ async def scenario_print_threads(fclient: ckit_client.FlexusClient, fgroup_id: s
             colors = {
                 "user": "\033[93m",      # Bright Yellow
                 "assistant": "\033[92m", # Bright Green
-                "system": "\033[97m",    # Bright White
+                "system": "\033[95m",
+                "cd_instruction": "\033[95m",
                 "tool": "\033[95m",      # Bright Magenta
                 "kernel": "\033[96m"     # Bright Cyan
             }
