@@ -524,6 +524,7 @@ async def run_happy_trajectory(
             btest_marketable_version_str=bot_version,
             btest_name=skill__scenario,
             btest_model=model_name,
+            btest_experiment=scenario.experiment or "",
             btest_trajectory_happy=trajectory_happy,
             btest_trajectory_actual="",
             btest_rating_happy=0,
@@ -713,7 +714,7 @@ async def run_happy_trajectory(
                 },
             }
             score_yaml = ckit_scenario.yaml_dump_with_multiline(score_data)
-            score_path = os.path.join(output_dir, f"{skill__scenario}-v{bot_version}-{model_name}{experiment_suffix}-score.yaml")
+            score_path = os.path.join(output_dir, f"{skill__scenario}-v{bot_version}{experiment_suffix}-{model_name}-score.yaml")
             with open(score_path, "w") as f:
                 f.write(score_yaml)
             logger.info(f"exported {score_path}")
@@ -726,6 +727,7 @@ async def run_happy_trajectory(
                     btest_marketable_version_str=bot_version,
                     btest_name=skill__scenario,
                     btest_model=model_name,
+                    btest_experiment=scenario.experiment or "",
                     btest_trajectory_happy=trajectory_happy,
                     btest_trajectory_actual=trajectory_actual,
                     btest_rating_happy=judge_result.rating_happy,
