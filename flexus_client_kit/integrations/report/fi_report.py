@@ -1115,4 +1115,4 @@ async def handle_process_report_tool(
         max_tokens=16000
     )
 
-    return "WAIT_SUBCHATS"
+    raise ckit_cloudtool.WaitForSubchats()

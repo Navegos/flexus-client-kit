@@ -38,6 +38,7 @@ class ScenarioJudgeOutput:
     feedback_happy: str
     rating_actually: int
     feedback_actually: str
+    criticism: dict
     cost: int
 
 
@@ -55,6 +56,7 @@ class BotScenarioUpsertInput:
     btest_feedback_actually: str
     btest_shaky_human: int
     btest_shaky_tool: int
+    btest_criticism: str
     btest_cost: int
 
 

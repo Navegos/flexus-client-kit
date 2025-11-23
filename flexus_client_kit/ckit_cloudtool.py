@@ -30,6 +30,10 @@ class NeedsConfirmation(Exception):
         super().__init__(f"Confirmation needed: {confirm_explanation}")
 
 
+class WaitForSubchats(Exception):
+    pass
+
+
 @dataclass
 class FCloudtoolCall:
     caller_fuser_id: str  # copy of thread owner fuser_id

@@ -140,7 +140,7 @@ async def frog_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.R
             fcall_id=toolcall.fcall_id,
             skill="huntmode",
         )
-        return "WAIT_SUBCHATS"
+        raise ckit_cloudtool.WaitForSubchats()
 
     @rcx.on_tool_call(SWITCH_CHAT_MODE_TOOL.name)
     async def print_chat_restart_widget(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:

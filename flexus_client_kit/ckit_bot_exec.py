@@ -175,6 +175,8 @@ class RobotContext:
         except json.JSONDecodeError:
             # nothing in logs -- normal for a model to produce garbage on occasion
             tool_result = "Arguments expected to be a valid json, instead got: %r" % args
+        except ckit_cloudtool.WaitForSubchats:
+            tool_result = "WAIT_SUBCHATS"
         except ckit_cloudtool.NeedsConfirmation as e:
             logger.info("%s needs human confirmation: %s" % (toolcall.fcall_id, e.confirm_explanation))
             await ckit_cloudtool.cloudtool_confirmation_request(fclient, toolcall.fcall_id, e.confirm_setup_key, e.confirm_command, e.confirm_explanation)
@@ -530,6 +532,7 @@ async def run_happy_trajectory(
             btest_feedback_actually="",
             btest_shaky_human=0,
             btest_shaky_tool=0,
+            btest_criticism="{}",
             btest_cost=0,
         ),
     )
@@ -695,6 +698,7 @@ async def run_happy_trajectory(
                 "happy_feedback": judge_result.feedback_happy,
                 "actual_rating": judge_result.rating_actually,
                 "actual_feedback": judge_result.feedback_actually,
+                "criticism": judge_result.criticism,
                 "shaky_human": shaky_human,
                 "shaky_tool": shaky_tool,
                 "stop_reason": stop_reason,
@@ -727,6 +731,7 @@ async def run_happy_trajectory(
                     btest_feedback_actually=judge_result.feedback_actually,
                     btest_shaky_human=shaky_human,
                     btest_shaky_tool=shaky_tool,
+                    btest_criticism=json.dumps(judge_result.criticism),
                     btest_cost=total_cost,
                 ),
             )
