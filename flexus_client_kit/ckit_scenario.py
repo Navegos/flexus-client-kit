@@ -51,8 +51,11 @@ class BotScenarioUpsertInput:
     btest_trajectory_actual: str
     btest_rating_happy: int
     btest_rating_actually: int
+    btest_feedback_happy: str
+    btest_feedback_actually: str
     btest_shaky_human: int
     btest_shaky_tool: int
+    btest_cost: int
 
 
 MARKETPLACE_DEV_STAGES = ["MARKETPLACE_DEV", "MARKETPLACE_WAITING_IMAGE", "MARKETPLACE_FAILED_IMAGE_BUILD"]

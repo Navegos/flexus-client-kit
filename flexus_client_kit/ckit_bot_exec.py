@@ -526,8 +526,11 @@ async def run_happy_trajectory(
             btest_trajectory_actual="",
             btest_rating_happy=0,
             btest_rating_actually=0,
+            btest_feedback_happy="",
+            btest_feedback_actually="",
             btest_shaky_human=0,
             btest_shaky_tool=0,
+            btest_cost=0,
         ),
     )
     logger.info("Saved happy trajectory to database before starting test, fake cloud tools will use it")
@@ -708,6 +711,7 @@ async def run_happy_trajectory(
                 f.write(score_yaml)
             logger.info(f"exported {score_path}")
 
+            total_cost = cost_judge + cost_human + cost_tools + cost_assistant
             await ckit_scenario.bot_scenario_result_upsert(
                 scenario.fclient,
                 ckit_scenario.BotScenarioUpsertInput(
@@ -719,8 +723,11 @@ async def run_happy_trajectory(
                     btest_trajectory_actual=trajectory_actual,
                     btest_rating_happy=judge_result.rating_happy,
                     btest_rating_actually=judge_result.rating_actually,
+                    btest_feedback_happy=judge_result.feedback_happy,
+                    btest_feedback_actually=judge_result.feedback_actually,
                     btest_shaky_human=shaky_human,
                     btest_shaky_tool=shaky_tool,
+                    btest_cost=total_cost,
                 ),
             )
             logger.info("Full scenario results saved to database")
