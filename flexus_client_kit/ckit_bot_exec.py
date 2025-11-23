@@ -557,7 +557,7 @@ async def run_happy_trajectory(
             ht2 = time.time()
             cost_human += result.cost
             stop_reason = result.stop_reason
-            logger.info("%0.2f human says: %r shaky=%s stop_reason=%r" % (ht2-ht1, result.next_human_message, result.shaky, result.stop_reason))
+            logger.info("human says %0.2fs: %r shaky=%s stop_reason=%r" % (ht2-ht1, result.next_human_message, result.shaky, result.stop_reason))
             if result.scenario_done:
                 break
 
