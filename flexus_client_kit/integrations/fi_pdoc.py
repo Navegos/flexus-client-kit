@@ -134,8 +134,9 @@ class IntegrationPdoc:
                 folder_count = sum(1 for item in result if item.is_folder)
                 r += f"\n{doc_count} documents and {folder_count} folders\n"
 
-            elif op == "cat" or op == "activate":
+            elif op == "cat" or op == "read" or op == "activate":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")
+                p = p or ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "path", "")
                 if not p:
                     return f"Error: p required\n\n{HELP}"
                 if self.is_fake:
@@ -149,6 +150,8 @@ class IntegrationPdoc:
 
             elif op == "overwrite" or op == "create":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")
+                p = p or ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "path", "")
+
                 text = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "text", "")
                 if not p:
                     return f"Error: p required\n\n{HELP}"
@@ -172,6 +175,8 @@ class IntegrationPdoc:
 
             elif op == "update_json_text":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")
+                p = p or ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "path", "")
+
                 json_path = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "json_path", "")
                 text = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "text", "")
                 if not p or not json_path or not text:
@@ -197,6 +202,8 @@ class IntegrationPdoc:
 
             elif op == "rm":
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "")
+                p = p or ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "path", "")
+
                 if not p:
                     return f"Error: p required\n\n{HELP}"
 
