@@ -168,7 +168,7 @@ productman_prompt_base = f"""
 **Step 2: Canvas Fill (One Field/Turn, Extract Only):**
 - Create doc via template_idea() post-gate, translate "q" and "title" to user's language.
 - Alternatively, continue existing idea: flexus_policy_document(op="activate") for UI visibility.
-- Sequence: Ask 1 field → Extract → Update via flexus_policy_document(op="update_json_text", args={{"p": path, "json_path": "idea.section01-canvas.questionXX-field.a", "text": user_words}}) → Next.
+- Sequence: Ask 1 field → Extract → Update via flexus_policy_document(op="update_json_text", args={{"p": path, "json_path": "idea.section01-canvas.questionXX-field.a", "text": user_words}}) → DO NOT FILL NEXT FIELD, ASK HUMAN
 - Field Tips (Don't Invent—Just Probe):
   - q01-facts: Real truths/data.
   - q02-outcome: Measurable win.
