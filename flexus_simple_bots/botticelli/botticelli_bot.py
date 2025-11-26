@@ -4,9 +4,11 @@ import logging
 import re
 import base64
 import os
+import io
 from typing import Dict, Any, List, Union
 from pymongo import AsyncMongoClient
 import openai
+from PIL import Image
 
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_cloudtool
@@ -40,26 +42,26 @@ CAT_PICTURE_TOOL = ckit_cloudtool.CloudTool(
 
 STYLEGUIDE_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
     name="template_styleguide",
-    description="Create style guide file in pdoc. Path format: /design/{project-name}-styleguide",
+    description="Create style guide file in pdoc. Saves to /style-guide by default.",
     parameters={
         "type": "object",
         "properties": {
-            "path": {
-                "type": "string",
-                "description": "Path where to write style guide. Should be /design/{project-name}-styleguide using kebab-case: '/design/myproject-styleguide'"
-            },
             "text": {
                 "type": "string",
                 "description": "JSON text of the style guide document. Must match the structure of example_styleguide with exact keys."
             },
+            "path": {
+                "type": "string",
+                "description": "Optional path where to write style guide. Defaults to /style-guide"
+            },
         },
-        "required": ["path", "text"],
+        "required": ["text"],
     },
 )
 
 GENERATE_PICTURE_TOOL = ckit_cloudtool.CloudTool(
-    name="generate_picture",
-    description="Generate a picture from a text prompt using AI. Saves the result to MongoDB. Acceptable sizes: '1024x1024' (square), '1024x1536' (portrait), '1536x1024' (landscape)",
+    name="picturegen",
+    description="Generate a picture from a text prompt using AI. Saves .png result to MongoDB. Acceptable sizes: '1024x1024' (square), '1024x1536' (portrait), '1536x1024' (landscape)",
     parameters={
         "type": "object",
         "properties": {
@@ -74,7 +76,7 @@ GENERATE_PICTURE_TOOL = ckit_cloudtool.CloudTool(
             },
             "filename": {
                 "type": "string",
-                "description": "Filename for storing in MongoDB (e.g., 'ad-campaign/hero-image.png'). Use kebab-case."
+                "description": "Filename for storing in MongoDB, e.g. '/my-artwork/neon-elephant-at-night--buy-our-elephants.png'"
             }
         },
         "required": ["prompt", "size", "filename"],
@@ -140,28 +142,30 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
     @rcx.on_tool_call(CAT_PICTURE_TOOL.name)
     async def toolcall_get_cat_picture(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> Union[str, List[Dict[str, str]]]:
+        cat_image_bytes = base64.b64decode(CAT_PIC)
+        mongodb_path = "pictures/cat.gif"
+        await ckit_mongo.store_file(personal_mongo, mongodb_path, cat_image_bytes)
+        image_url = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{mongodb_path}"
         result = [
-            {"m_type": "text", "m_content": "Here is the picture:"},
-            {"m_type": "image/gif", "m_content": CAT_PIC}
+            {"m_type": "text", "m_content": "Here is a picture of a cat, saved to mongodb:\n%sAccessible via:\n%s\n" % (mongodb_path, image_url)},
+            {"m_type": "image/gif", "m_content": image_url}
         ]
         return result
 
     @rcx.on_tool_call(STYLEGUIDE_TEMPLATE_TOOL.name)
     async def toolcall_styleguide_template(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
-        path = model_produced_args.get("path", "")
+        path = model_produced_args.get("path", "/style-guide")
         text = model_produced_args.get("text", "")
-        if not path:
-            return "Error: path required"
+
         if not text:
             return "Error: text required"
-        if not path.startswith("/design/"):
-            return "Error: path must start with /design/ (e.g. /design/myproject-styleguide)"
+
         path_segments = path.strip("/").split("/")
         for segment in path_segments:
             if not segment:
                 continue
             if not all(c.islower() or c.isdigit() or c == "-" for c in segment):
-                return f"Error: Path segment '{segment}' must use kebab-case (lowercase letters, numbers, hyphens only). Example: 'myproject-styleguide'"
+                return f"Error: Path segment '{segment}' must use kebab-case (lowercase letters, numbers, hyphens only)"
 
         try:
             styleguide_doc = json.loads(text)
@@ -181,7 +185,7 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
         return await pdoc_integration.called_by_model(toolcall, model_produced_args)
 
     @rcx.on_tool_call(GENERATE_PICTURE_TOOL.name)
-    async def toolcall_generate_picture(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+    async def toolcall_generate_picture(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> Union[str, List[Dict[str, str]]]:
         prompt = model_produced_args.get("prompt", "")
         size = model_produced_args.get("size", "1024x1024")
         filename = model_produced_args.get("filename", "")
@@ -192,6 +196,20 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             return "Error: filename required"
         if size not in ["1024x1024", "1024x1536", "1536x1024"]:
             return f"Error: size must be one of: 1024x1024 (square), 1024x1536 (portrait), 1536x1024 (landscape)"
+
+        try:
+            filename.encode('ascii')
+        except UnicodeEncodeError:
+            return "Error: filename must be ASCII only"
+
+        if ' ' in filename:
+            return "Error: filename cannot contain spaces"
+
+        if any(ord(c) < 32 or ord(c) == 127 for c in filename):
+            return "Error: filename cannot contain control characters"
+
+        if ".." in filename or "\\" in filename:
+            return "Error: filename contains invalid path sequences (no .. or backslashes)"
 
         if not filename.endswith(".png"):
             filename = filename + ".png"
@@ -207,12 +225,44 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             )
 
             image_b64 = rsp.data[0].b64_json
-            image_bytes = base64.b64decode(image_b64)
+            png_bytes = base64.b64decode(image_b64)
+            png_size = len(png_bytes)
 
-            await ckit_mongo.store_file(personal_mongo, filename, image_bytes)
-            logger.info(f"Saved generated image to MongoDB: {filename}")
+            with Image.open(io.BytesIO(png_bytes)) as img:
+                original_width, original_height = img.size
 
-            return f"created {filename}"
+                webp_buffer = io.BytesIO()
+                img.save(webp_buffer, 'WEBP', quality=85, method=6)
+                webp_bytes = webp_buffer.getvalue()
+                webp_size = len(webp_bytes)
+
+                resized_width = original_width // 2
+                resized_height = original_height // 2
+                img_resized = img.resize((resized_width, resized_height), Image.LANCZOS)
+
+                webp_resized_buffer = io.BytesIO()
+                img_resized.save(webp_resized_buffer, 'WEBP', quality=85, method=6)
+                webp_resized_bytes = webp_resized_buffer.getvalue()
+                webp_resized_size = len(webp_resized_bytes)
+
+            logger.info("Image sizes: PNG %0.1fk, WebP %0.1fk, WebP resized %0.1fk" % (png_size / 1024.0, webp_size / 1024.0, webp_resized_size / 1024.0))
+
+            webp_filename = filename.replace(".png", ".webp")
+            await ckit_mongo.store_file(personal_mongo, webp_filename, webp_bytes)
+            logger.info(f"Saved full-size image to MongoDB: {webp_filename}")
+
+            base_filename = filename.replace(".png", "")
+            webp_resized_filename = f"{base_filename}-{resized_width}x{resized_height}.webp"
+            await ckit_mongo.store_file(personal_mongo, webp_resized_filename, webp_resized_bytes)
+            logger.info(f"Saved resized image to MongoDB: {webp_resized_filename}")
+
+            image_url1 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{webp_filename}"
+            image_url2 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{webp_resized_filename}"
+            result = [
+                {"m_type": "text", "m_content": f"Generated image saved to mongodb:\n{webp_filename}\nor preview:\n{webp_resized_filename}\n\nAccessible via:\n{image_url1}\n{image_url2}\n"},
+                {"m_type": "image/webp", "m_content": image_url2}
+            ]
+            return result
 
         except Exception as e:
             logger.error(f"Error generating image: {e}", exc_info=True)

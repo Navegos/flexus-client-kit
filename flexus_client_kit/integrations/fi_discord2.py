@@ -551,6 +551,8 @@ class IntegrationDiscord:
         return items
 
     def _process_image(self, data: bytes) -> Optional[Dict[str, str]]:
+        # Always encode to base64 since we've already downloaded it
+        # m_content can also be a URL (http:// or https://) for public images
         try:
             img = Image.open(io.BytesIO(data))
             img.thumbnail((600, 600), Image.Resampling.LANCZOS)

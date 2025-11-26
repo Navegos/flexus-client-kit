@@ -834,6 +834,8 @@ class IntegrationSlack:
         return printable_ratio > 0.8
 
     async def _process_slack_image(self, file_bytes: bytes, mimetype: str) -> dict:
+        # Always encode to base64, Slack URLs require authentication and can't be passed directly
+        # m_content can also be a URL (http:// or https://) for public images
         try:
             img = Image.open(io.BytesIO(file_bytes))
             img.thumbnail((600, 600), Image.Resampling.LANCZOS)
