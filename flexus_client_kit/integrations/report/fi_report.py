@@ -123,7 +123,7 @@ def _format_parameters_summary(params: Dict[str, Any]) -> str:
     """Format parameters for display in status messages."""
     if not params:
         return "None"
-    
+
     summary = []
     for key, value in params.items():
         if isinstance(value, list):
@@ -230,12 +230,12 @@ def _create_todo_queue(report_id: str, report_params: Dict[str, Any], sections: 
             depends_on = list(dict.fromkeys(depends_on))
             formatted_desc = description
             formatted_example = example
-            
+
             interpolation_context = dict(combo)
             for key, value in report_params.items():
                 if not isinstance(value, list):  # Only use scalar values for interpolation
                     interpolation_context[key] = value
-            
+
             for key, value in interpolation_context.items():
                 formatted_desc = formatted_desc.replace(f"{{{key}}}", str(value))
                 formatted_example = formatted_example.replace(f"{{{key}}}", str(value))
@@ -297,7 +297,7 @@ async def _export_report_tool(
         "datetime": template_datetime,
         "sections": {},  # All sections by their full name
     }
-    
+
     if "parameters" in report_data:
         template_data.update(report_data["parameters"])
 
@@ -306,7 +306,7 @@ async def _export_report_tool(
         if placeholder:
             # Handle null content - convert to empty string for template rendering
             content = section["content"] if section["content"] is not None else ""
-            
+
             template_data["sections"][section_name] = {
                 "content": content,
                 "placeholder": placeholder,
@@ -329,7 +329,7 @@ async def _export_report_tool(
     for param_name, param_value in report_params.items():
         if isinstance(param_value, list):
             all_entities.update(str(item) for item in param_value)
-    
+
     if all_entities:
         template_data["entities_data"] = {}
 
@@ -358,7 +358,7 @@ async def _export_report_tool(
     template_html = jinja_template.render(**template_data)
 
     report_name = f"report_{report_id}.html"
-    await ckit_mongo.store_file(mongo_collection, report_name, template_html.encode('utf-8'))
+    await ckit_mongo.mongo_store_file(mongo_collection, report_name, template_html.encode('utf-8'), 30 * 86400)
 
     try:
         deleted_count = await _cleanup_temporary_files(mongo_collection, report_id)
@@ -385,9 +385,9 @@ async def _get_report_doc_by_report_id(mongo_collection: Collection, ws_timezone
     tz = ZoneInfo(ws_timezone)
     current_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S %Z")
 
-    report_doc = await ckit_mongo.retrieve_file(mongo_collection, f"report_{report_id}.json")
+    report_doc = await ckit_mongo.mongo_retrieve_file(mongo_collection, f"report_{report_id}.json")
     if not report_doc:
-        all_files = await ckit_mongo.list_files(mongo_collection)
+        all_files = await ckit_mongo.mongo_ls(mongo_collection)
         report_files = [f for f in all_files if f["path"].startswith("report_") and f["path"].endswith(".json")]
         if report_files:
             available_reports = []
@@ -452,7 +452,7 @@ async def handle_create_report_tool(
     timestamp = datetime.now(tz).strftime("%Y%m%d_%H%M%S")
     report_id = f"{name}_{timestamp}"
 
-    existing_report = await ckit_mongo.retrieve_file(mongo_collection, f"report_{report_id}.json")
+    existing_report = await ckit_mongo.mongo_retrieve_file(mongo_collection, f"report_{report_id}.json")
     if existing_report:
         return f"Error: Report with ID '{report_id}' already exists. Please try again or use a different name."
 
@@ -475,7 +475,7 @@ async def handle_create_report_tool(
     except Exception as e:
         return f"Error creating task queue: {e}"
 
-    await ckit_mongo.store_file(
+    await ckit_mongo.mongo_store_file(
         mongo_collection,
         f"report_{report_id}.json",
         json.dumps({
@@ -493,7 +493,7 @@ async def handle_create_report_tool(
 
     total_tasks = len(todo_queue)
     current_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S %Z")
-    
+
     # Format parameters for display
     param_summary = []
     for key, value in report_params.items():
@@ -529,7 +529,7 @@ async def handle_fill_section_tool(
         content = None
     if json_filename:
         try:
-            json_file = await ckit_mongo.retrieve_file(mongo_collection, json_filename)
+            json_file = await ckit_mongo.mongo_retrieve_file(mongo_collection, json_filename)
             if not json_file:
                 return f"Error: JSON file '{json_filename}' not found in the database"
             if "json" in json_file:
@@ -542,7 +542,7 @@ async def handle_fill_section_tool(
 
     report_id = _fix_unicode_corruption(report_id)
     section_name = _fix_unicode_corruption(section_name)
-    
+
     if content is not None:
         content = _fix_unicode_corruption(content)
     else:
@@ -588,7 +588,7 @@ async def handle_fill_section_tool(
         try:
             json_filename = f"meta_data_{report_id}_{section_name}.json"
             json_content = json.dumps(content, indent=2).encode('utf-8')
-            await ckit_mongo.store_file(mongo_collection, json_filename, json_content)
+            await ckit_mongo.mongo_store_file(mongo_collection, json_filename, json_content)
             json_data_file = json_filename
             logger.info(f"Stored meta section data to {json_filename} ({len(json_content)} bytes)")
         except Exception as e:
@@ -611,15 +611,16 @@ async def handle_fill_section_tool(
     if len(report_data["todo_queue"]) == 0:
         report_data["status"] = "completed"
 
-    await ckit_mongo.update_file(
+    await ckit_mongo.mongo_overwrite(
         mongo_collection,
         f"report_{report_id}.json",
-        json.dumps(report_data).encode('utf-8')
+        json.dumps(report_data).encode('utf-8'),
+        30 * 86400
     )
 
     # Create appropriate success message based on content
     content_msg = "with null content (no data)" if content is None else "with content"
-    
+
     result = [
         f"[{current_time} in {tz}]\n",
         f"Successfully filled section '{section_name}' {content_msg}",
@@ -650,7 +651,7 @@ async def handle_report_status_tool(
     current_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S %Z")
 
     async def _generate_reports_list(error_msg: str = "", max_reports=50) -> str:
-        all_files = await ckit_mongo.list_files(mongo_collection)
+        all_files = await ckit_mongo.mongo_ls(mongo_collection)
         report_files = [f for f in all_files if f["path"].startswith("report_") and f["path"].endswith(".json")]
         html_reports = {f["path"].replace(".html", "").replace("report_", ""): f
                         for f in all_files if f["path"].startswith("report_") and f["path"].endswith(".html")}
@@ -734,7 +735,7 @@ Available report types:
     if not report_id:
         return await _generate_reports_list()
 
-    report_doc = await ckit_mongo.retrieve_file(mongo_collection, f"report_{report_id}.json")
+    report_doc = await ckit_mongo.mongo_retrieve_file(mongo_collection, f"report_{report_id}.json")
 
     if not report_doc:
         return await _generate_reports_list(f"❌ Error: Report '{report_id}' not found.\n\n📋 ")
@@ -746,10 +747,10 @@ Available report types:
     completion_pct = (filled_count / total_tasks * 100) if total_tasks > 0 else 0
 
     html_report_name = f"report_{report_id}.html"
-    html_exists = await ckit_mongo.retrieve_file(mongo_collection, html_report_name)
+    html_exists = await ckit_mongo.mongo_retrieve_file(mongo_collection, html_report_name)
     if report_data['status'] == "completed" and not html_exists:
         await _export_report_tool(ws_timezone, mongo_collection, report_id=report_id)
-        html_exists = await ckit_mongo.retrieve_file(mongo_collection, html_report_name)
+        html_exists = await ckit_mongo.mongo_retrieve_file(mongo_collection, html_report_name)
 
     status_emoji = "✅" if report_data['status'] == "completed" else "🔄"
     result = [
@@ -877,19 +878,19 @@ async def handle_remove_report_tool(
 ) -> str:
     if not report_id:
         return "Error: 'report_id' parameter is required"
-    
+
     report_id = _fix_unicode_corruption(report_id)
-    
+
     tz = ZoneInfo(ws_timezone)
     current_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S %Z")
-    
+
     report_json_path = f"report_{report_id}.json"
-    report_doc = await ckit_mongo.retrieve_file(mongo_collection, report_json_path)
-    
+    report_doc = await ckit_mongo.mongo_retrieve_file(mongo_collection, report_json_path)
+
     if not report_doc:
-        all_files = await ckit_mongo.list_files(mongo_collection)
+        all_files = await ckit_mongo.mongo_ls(mongo_collection)
         report_files = [f for f in all_files if f["path"].startswith("report_") and f["path"].endswith(".json")]
-        
+
         if report_files:
             available_reports = []
             for f in report_files[:10]:
@@ -897,7 +898,7 @@ async def handle_remove_report_tool(
                 report_name = rdata.get('_id', 'unknown')
                 status = rdata.get('status', 'unknown')
                 available_reports.append(f"  - {report_name} (status: {status})")
-            
+
             return f"""[{current_time} in {tz}]
 
 Error: Report '{report_id}' not found.
@@ -914,10 +915,10 @@ No reports available in the database."""
 
     deleted_files = []
     failed_files = []
-    
+
     # 1. Delete the main report JSON file
     try:
-        if await ckit_mongo.delete_file(mongo_collection, report_json_path):
+        if await ckit_mongo.mongo_rm(mongo_collection, report_json_path):
             deleted_files.append(report_json_path)
             logger.info(f"Deleted report JSON: {report_json_path}")
         else:
@@ -925,25 +926,25 @@ No reports available in the database."""
     except Exception as e:
         logger.error(f"Failed to delete {report_json_path}: {e}")
         failed_files.append(report_json_path)
-    
+
     # 2. Delete the HTML report if it exists
     html_path = f"report_{report_id}.html"
     try:
-        if await ckit_mongo.delete_file(mongo_collection, html_path):
+        if await ckit_mongo.mongo_rm(mongo_collection, html_path):
             deleted_files.append(html_path)
             logger.info(f"Deleted report HTML: {html_path}")
     except Exception as e:
         logger.warning(f"HTML file not found or failed to delete: {html_path}: {e}")
-    
+
     # 3. Delete associated meta data files
     try:
-        all_files = await ckit_mongo.list_files(mongo_collection)
+        all_files = await ckit_mongo.mongo_ls(mongo_collection)
         meta_files = [f for f in all_files if f["path"].startswith(f"meta_data_{report_id}_")]
-        
+
         for file_info in meta_files:
             file_path = file_info["path"]
             try:
-                if await ckit_mongo.delete_file(mongo_collection, file_path):
+                if await ckit_mongo.mongo_rm(mongo_collection, file_path):
                     deleted_files.append(file_path)
                     logger.info(f"Deleted meta data file: {file_path}")
                 else:
@@ -953,31 +954,31 @@ No reports available in the database."""
                 failed_files.append(file_path)
     except Exception as e:
         logger.error(f"Error while cleaning up meta files for report {report_id}: {e}")
-    
+
     result = [f"[{current_time} in {tz}]", ""]
-    
+
     if deleted_files:
         result.append(f"✅ Successfully deleted report '{report_id}'")
         result.append(f"\nDeleted {len(deleted_files)} file(s):")
         for file in deleted_files:
             result.append(f"  - {file}")
-    
+
     if failed_files:
         result.append(f"\n⚠️ Failed to delete {len(failed_files)} file(s):")
         for file in failed_files:
             result.append(f"  - {file}")
-    
+
     if not deleted_files and not failed_files:
         result.append(f"❌ No files were deleted for report '{report_id}'")
-    
-    remaining_files = await ckit_mongo.list_files(mongo_collection)
+
+    remaining_files = await ckit_mongo.mongo_ls(mongo_collection)
     remaining_reports = [f for f in remaining_files if f["path"].startswith("report_") and f["path"].endswith(".json")]
-    
+
     if remaining_reports:
         result.append(f"\n📊 Remaining reports in database: {len(remaining_reports)}")
     else:
         result.append("\n📊 No reports remaining in database")
-    
+
     return "\n".join(result)
 
 
@@ -1000,7 +1001,7 @@ def _format_dependency_content(
             if json_data_file:
                 json_data_files.append(json_data_file)
                 dependency_text += f"📄 JSON Data File: {json_data_file}\n"
-            
+
             # Handle null content in dependencies
             if content is None:
                 dependency_text += "[No data available for this section]\n"
@@ -1023,13 +1024,13 @@ with open(filenames[0], 'r') as f:
 
 async def _cleanup_temporary_files(mongo_collection: Collection, report_id: str) -> int:
     try:
-        all_files = await ckit_mongo.list_files(mongo_collection)
+        all_files = await ckit_mongo.mongo_ls(mongo_collection)
         temp_files = [f for f in all_files if not f["path"].startswith("report_")]
         deleted_count = 0
         for file_info in temp_files:
             file_path = file_info["path"]
             try:
-                success = await ckit_mongo.delete_file(mongo_collection, file_path)
+                success = await ckit_mongo.mongo_rm(mongo_collection, file_path)
                 if success:
                     deleted_count += 1
                     logger.info(f"Cleaned up temporary file: {file_path}")
@@ -1037,12 +1038,12 @@ async def _cleanup_temporary_files(mongo_collection: Collection, report_id: str)
                     logger.warning(f"Failed to delete temporary file: {file_path}")
             except Exception as e:
                 logger.error(f"Error deleting temporary file {file_path}: {e}")
-        
+
         if deleted_count > 0:
             logger.info(f"Cleanup completed: removed {deleted_count} temporary files for report {report_id}")
-        
+
         return deleted_count
-        
+
     except Exception as e:
         logger.error(f"Error during temporary files cleanup for report {report_id}: {e}")
         return 0

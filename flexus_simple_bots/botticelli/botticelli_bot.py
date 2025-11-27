@@ -18,6 +18,7 @@ from flexus_client_kit import ckit_ask_model
 from flexus_client_kit import ckit_kanban
 from flexus_client_kit import ckit_mongo
 from flexus_client_kit.integrations import fi_pdoc
+from flexus_client_kit.integrations import fi_mongo_store
 from flexus_simple_bots.botticelli import botticelli_install
 from flexus_simple_bots.botticelli import botticelli_prompts
 from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
@@ -29,16 +30,6 @@ BOT_NAME = "botticelli"
 BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
-
-CAT_PICTURE_TOOL = ckit_cloudtool.CloudTool(
-    name="get_cat_picture",
-    description="Returns a picture of a cat as base64 encoded image.",
-    parameters={
-        "type": "object",
-        "properties": {},
-        "required": [],
-    },
-)
 
 STYLEGUIDE_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
     name="template_styleguide",
@@ -83,15 +74,44 @@ GENERATE_PICTURE_TOOL = ckit_cloudtool.CloudTool(
     },
 )
 
-TOOLS = [CAT_PICTURE_TOOL, STYLEGUIDE_TEMPLATE_TOOL, GENERATE_PICTURE_TOOL, fi_pdoc.POLICY_DOCUMENT_TOOL]
+CROP_IMAGE_TOOL = ckit_cloudtool.CloudTool(
+    name="crop_image",
+    description="Crop an image into one or more regions. Creates full-size crops plus 0.5x scaled versions. Outputs named with -crop000, -crop001, etc.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "source_path": {
+                "type": "string",
+                "description": "Path to source image in MongoDB, e.g. 'pictures/my-image.webp'"
+            },
+            "crops": {
+                "type": "array",
+                "description": "List of crop regions as [x, y, width, height] in pixels. Example: [[0, 0, 512, 512], [512, 0, 512, 512]]",
+                "items": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 4,
+                    "maxItems": 4
+                }
+            }
+        },
+        "required": ["source_path", "crops"],
+    },
+)
 
-CAT_PIC = "R0lGODlhAAQAA4QRAP//zMyZZplmMwAAAGYzM8zMmWYzAGZmZpmZmTMAAP/MmTMzM8zMzMxmM2ZmM5mZZplmZv///////////////////////////////////////////////////////////yH5BAEKAB8ALAAAAAAABAADAAX+ICCOZGmeaKqubOu+cCzPdG3feK7vfO//wKBwSCwaj8ikcslsOp/QqHRKrVqv2Kx2y+16v+CweEwum8/otHrNbrvf8Lh8Tq/b7/i8fs/v+/+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wADChxIsKDBgwgTKlzIsKHDhxAjSpxIsaLFixgzatzIsaPHjyBDihxJsqTJkyj+U6pcybKly5cwY8qcSbOmzZs4c+rcybOnz59AgwodSrSo0aNIkypdyrSp06dQo0qdSrWq1atYs2rdyrWr169gw4odS7as2bNo06pdy7at27dw48qdS7eu3bt48+rdy7ev37+AAwseTLiw4cOIEytezLix48eQI0ueTLmy5cuYM2vezLmz58+gQ4seTbq06dOoU6tezbq169ewY8ueTbu27du4c+vezbu379/AgwsfTry48ePIkytfzry58+fQo0ufTr269evYs2vfzr279+/gw4sfT768+fPo06tfz769+/fw48ufT7++/fv48+vfz7+///8ABijggAQWaOCBCCb+qOCCDDbo4IMQRijhhBRWaOGFGGao4YYcdujhhyCGKOKIJJZo4okopqjiiiy26OKLMMYo44w01mjjjTjmqOOOPPbo449ABinkkEQWaeSRSCap5JJMNunkk1BGKeWUVFZp5ZVYZqnlllx26eWXYIYp5phklmnmmWimqeaabLbp5ptwxinnnHTWaeedeOap55589unnn4AGKuighBZq6KGIJqrooow26uijkEYq6aSUVmrppZhmqummnHbq6aeghirqqKSWauqpqKaq6qqsturqq7DGKuustNZq66245qrrrrz26uuvwAYr7LDEFmvsscgmq+yyzDbr7LPQRivttNT+Vmvttdhmq+223Hbr7bfghivuuOSWa+656Kar7rrstuvuu/DGK++89NZr77345qvvvvz26++/AAcs8MAEF2zwwQgnrPDCDDfs8MMQRyzxxBRXbPHFGGes8cYcd+zxxyCHLPLIJJds8skop6zyyiy37PLLMMcs88w012zzzTjnrPPOPPfs889ABy300EQXbfTRSCet9NJMN+3001BHLfXUVFdt9dVYZ6311lx37fXXYIctNn0FDDAAAzIwYDbaYwdTAAICCPAAAjAggMAActPd9i8HEBBAAAIMUMALAywgAOAD7M23338HQIDeKpSdwOGIK+7LAQY0DjgEkJ9QwAH+eFMe+OCW74K55ogzUMDqrLN+wAIGUI446aXncroCCvwduNm892424wHkPnrtuvQdPO6AC0BA3AYQsLzyz/+N/PDE42I88o3HDrgBmSsft/TTC1699X5jr/vhAjQP+PKN4y68+OPbYjzqyQfAfffa0099/LT0/b3m30tf92QHQAPAj3+zOEAC8qc/7hEQdc07IAJf8TkCZI5+GMyg7gZwALZN0BVl+9/5HghAEZ5vAZ374CpCiDrekfBvvENd3B6nQhAOYHn5c2EGY7i9+yUghTVERQjjRrkEmO2FAeAhEWcIxCCagoWaMyLedlg4DNLQiak4AOic9z8Cmm0BC2j+HBFH6LzCHYB2WCSF3UJnQjEWDolLJAAHEYDGNI4CihqcogY1N4Am2hEUrzPbAh8oxwEgTo8FjGAf/2gKuyHAfy8UXSSVZ0Q6MhIV89vjHpVntjpekhRlQ6QmxVhIP35yFHdj3yiT17xKnnIVCziiJol4PwMk4IyvTMUCVKlB6DVvifvLpSjeZsFRAnOJzbObMO84AAauMnnMs6UEl9mJIT7zbw3o4f3k6ElqZgKP12QeMKfpzW+K8pnpI2ID4kbOcl7CmteEZgC56U5OlM2ZqxxjNAlwAFPWMxJl4yUGSRhAAXLvlv805zn1Bzh5RlOACE3oO28YOxM6II6hq6j+Q5V3AIlO1HkOXOIgZxg69q2zoTPsqEcrEUoLco8Au4QeSOU4Q2A2YJ22VOlKJ9FSaHLRcEukKPto+dKI7lQSLY3jAicXVJcec4a37OZRFxHKBAyVAEvdJ0VrCUxptnOqiUgq+grJRnbyzoLPI+IN6QnWRrxtjLor5ANGOICLPnWGFvxqWwvhP+nF1WzHU2sJ04nV++l1r4NAwPIgIMlCjtCIg4Vq83CJ2EUggLEEcEDysApYx6VPlhvFKj/9WdlBhNJ3qE2tag9bWtO27rWwjW0BGEDb2kq1tbjNrW53y9ve+va3wA2ucIdL3OIa97jITa5yl8vc5jr3udCNrnT+p0vd6lr3utjNrna3y93ueve74A2veMdL3vKa97zoTa9618ve9rr3vfCNr3znS9/62ve++M2vfvfL3/76978ADrCAB0zgAhv4wAhOsIIXzOAGO/jBEI6whCdM4Qpb+MIYzrCGN8zhDnv4wyAOsYhHTOISm/jEKE6xilfM4ha7+MUwjrGMZ0zjGtv4xjjOsY53zOMe+/jHQA6ykIdM5CIb+chITrKSl8zkJjv5yVCOspSnTOUqW/nKWM6ylrfM5S57+ctgDrOYx0zmMpv5zGhOs5rXzOY2u/nNcI6znOdM5zrb+c54zrOe98znPvv5z4AOtKAHTehCG/rQiE60ohfRzehGO/rRkI60pCdN6Upb+tKYzrSmN83pTnv606AOtahHTepSm/rUqE61qlfN6la7+tWwjrWsZ03rWtv61rjOta53zete+/rXwA62sIdN7GIb+9jITrayl83sZjv72dCOtrSnTe1qW/va2M62trfN7W57+9vgDre4x03ucpv73OhOt7rXze52u/vd8I63vOdN73rb+974zre+983vfvv73wAPuMAHTvCCG/zgCE+4whfO8IY7/OEQj7jEJ07xilv84hjPuMY3zvGOe/zjIJ9aCAAAOw=="
+TOOLS = [
+    STYLEGUIDE_TEMPLATE_TOOL,
+    GENERATE_PICTURE_TOOL,
+    CROP_IMAGE_TOOL,
+    fi_pdoc.POLICY_DOCUMENT_TOOL,
+    fi_mongo_store.MONGO_STORE_TOOL
+]
 
 async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.RobotContext) -> None:
     setup = ckit_bot_exec.official_setup_mixing_procedure(botticelli_install.botticelli_setup_schema, rcx.persona.persona_setup)
     pdoc_integration = fi_pdoc.IntegrationPdoc(rcx, rcx.persona.ws_root_group_id)
 
-    mongo_conn_str = await ckit_mongo.get_mongodb_creds(fclient, rcx.persona.persona_id)
+    mongo_conn_str = await ckit_mongo.mongo_fetch_creds(fclient, rcx.persona.persona_id)
     mongo = AsyncMongoClient(mongo_conn_str)
     dbname = rcx.persona.persona_id + "_db"
     mydb = mongo[dbname]
@@ -139,18 +159,6 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
     @rcx.on_updated_task
     async def updated_task_in_db(t: ckit_kanban.FPersonaKanbanTaskOutput):
         pass
-
-    @rcx.on_tool_call(CAT_PICTURE_TOOL.name)
-    async def toolcall_get_cat_picture(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> Union[str, List[Dict[str, str]]]:
-        cat_image_bytes = base64.b64decode(CAT_PIC)
-        mongodb_path = "pictures/cat.gif"
-        await ckit_mongo.store_file(personal_mongo, mongodb_path, cat_image_bytes)
-        image_url = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{mongodb_path}"
-        result = [
-            {"m_type": "text", "m_content": "Here is a picture of a cat, saved to mongodb:\n%sAccessible via:\n%s\n" % (mongodb_path, image_url)},
-            {"m_type": "image/gif", "m_content": image_url}
-        ]
-        return result
 
     @rcx.on_tool_call(STYLEGUIDE_TEMPLATE_TOOL.name)
     async def toolcall_styleguide_template(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
@@ -213,9 +221,10 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
         if not filename.endswith(".png"):
             filename = filename + ".png"
+        filename_base = filename.replace(".png", "")
 
         try:
-            logger.info(f"Generating image: {prompt[:50]}... size={size}")
+            logger.info(f"Generating {size} image: {prompt[:50]}...")
             rsp = await openai_client.images.generate(
                 model="dall-e-3",
                 prompt=prompt,
@@ -226,40 +235,28 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
             image_b64 = rsp.data[0].b64_json
             png_bytes = base64.b64decode(image_b64)
-            png_size = len(png_bytes)
-
             with Image.open(io.BytesIO(png_bytes)) as img:
-                original_width, original_height = img.size
-
+                img_w, img_h = img.size
+                img_w2, img_h2 = img_w // 2, img_h // 2
                 webp_buffer = io.BytesIO()
-                img.save(webp_buffer, 'WEBP', quality=85, method=6)
-                webp_bytes = webp_buffer.getvalue()
-                webp_size = len(webp_bytes)
-
-                resized_width = original_width // 2
-                resized_height = original_height // 2
-                img_resized = img.resize((resized_width, resized_height), Image.LANCZOS)
-
+                img_resized = img.resize((img_w2, img_h2), Image.LANCZOS)
                 webp_resized_buffer = io.BytesIO()
+                img.save(webp_buffer, 'WEBP', quality=85, method=6)
                 img_resized.save(webp_resized_buffer, 'WEBP', quality=85, method=6)
+                webp_bytes = webp_buffer.getvalue()
                 webp_resized_bytes = webp_resized_buffer.getvalue()
-                webp_resized_size = len(webp_resized_bytes)
 
-            logger.info("Image sizes: PNG %0.1fk, WebP %0.1fk, WebP resized %0.1fk" % (png_size / 1024.0, webp_size / 1024.0, webp_resized_size / 1024.0))
-
-            webp_filename = filename.replace(".png", ".webp")
-            await ckit_mongo.store_file(personal_mongo, webp_filename, webp_bytes)
-            logger.info(f"Saved full-size image to MongoDB: {webp_filename}")
-
-            base_filename = filename.replace(".png", "")
-            webp_resized_filename = f"{base_filename}-{resized_width}x{resized_height}.webp"
-            await ckit_mongo.store_file(personal_mongo, webp_resized_filename, webp_resized_bytes)
-            logger.info(f"Saved resized image to MongoDB: {webp_resized_filename}")
-
-            image_url1 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{webp_filename}"
-            image_url2 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{webp_resized_filename}"
+            logger.info("Image sizes: PNG %0.1fk, WebP %0.1fk, WebP resized %0.1fk" % (len(png_bytes) / 1024.0,  len(webp_bytes) / 1024.0, len(webp_resized_bytes) / 1024.0))
+            webp_p1 = filename.replace(".png", ".webp")
+            webp_p2 = f"{filename_base}-{img_w2}x{img_h2}.webp"
+            await ckit_mongo.mongo_store_file(personal_mongo, webp_p1, webp_bytes, 90 * 86400)
+            await ckit_mongo.mongo_store_file(personal_mongo, webp_p2, webp_resized_bytes, 90 * 86400)
+            logger.info(f"Saved to MongoDB: {webp_p1}")
+            logger.info(f"Saved to MongoDB: {webp_p2}")
+            image_url1 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{webp_p1}"
+            image_url2 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{webp_p2}"
             result = [
-                {"m_type": "text", "m_content": f"Generated image saved to mongodb:\n{webp_filename}\nor preview:\n{webp_resized_filename}\n\nAccessible via:\n{image_url1}\n{image_url2}\n"},
+                {"m_type": "text", "m_content": f"Generated image saved to mongodb:\n{webp_p1}\nor 0.5x size:\n{webp_p2}\n\nAccessible via:\n{image_url1}\n{image_url2}\n"},
                 {"m_type": "image/webp", "m_content": image_url2}
             ]
             return result
@@ -267,6 +264,113 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
         except Exception as e:
             logger.error(f"Error generating image: {e}", exc_info=True)
             return f"Error generating image: {str(e)}"
+
+    @rcx.on_tool_call(CROP_IMAGE_TOOL.name)
+    async def toolcall_crop_image(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> Union[str, List[Dict[str, str]]]:
+        source_path = model_produced_args.get("source_path", "")
+        crops = model_produced_args.get("crops", [])
+
+        if not source_path:
+            return "Error: source_path required"
+        if not crops:
+            return "Error: crops list required"
+
+        try:
+            source_doc = await ckit_mongo.mongo_retrieve_file(personal_mongo, source_path)
+            if not source_doc:
+                return f"Error: source image not found: {source_path}"
+            source_bytes = source_doc["data"]
+        except Exception as e:
+            return f"Error loading source image: {str(e)}"
+
+        with Image.open(io.BytesIO(source_bytes)) as src_img:
+            src_w, src_h = src_img.size
+
+            for i, crop in enumerate(crops):
+                if not isinstance(crop, list) or len(crop) != 4:
+                    return f"Error: crop {i} must be [x, y, width, height]"
+                x, y, w, h = crop
+                if not all(isinstance(v, int) for v in [x, y, w, h]):
+                    return f"Error: crop {i} coordinates must be integers"
+                if x < 0 or y < 0 or w <= 0 or h <= 0:
+                    return f"Error: crop {i} has invalid coordinates: x={x}, y={y}, w={w}, h={h}"
+                if x + w > src_w or y + h > src_h:
+                    return f"Error: crop {i} exceeds image bounds (image is {src_w}x{src_h}, crop goes to {x+w}x{y+h})"
+
+            base_path = re.sub(r'-\d+x\d+\.webp$', '.webp', source_path)
+            base_path = re.sub(r'-crop\d{3}\.webp$', '.webp', base_path)
+            base_path = re.sub(r'\.webp$', '', base_path)
+
+            existing_files = set()
+            cursor = personal_mongo.find({})
+            async for doc in cursor:
+                if "filename" in doc:
+                    existing_files.add(doc["filename"])
+
+            results = []
+            for crop_idx, crop in enumerate(crops):
+                x, y, w, h = crop
+
+                crop_num = None
+                for num in range(1000):
+                    candidate = f"{base_path}-crop{num:03d}.webp"
+                    if candidate not in existing_files:
+                        crop_num = num
+                        existing_files.add(candidate)
+                        break
+
+                if crop_num is None:
+                    return "Error: no available crop numbers (crop000-crop999 all used)"
+
+                cropped = src_img.crop((x, y, x + w, y + h))
+
+                webp_buffer = io.BytesIO()
+                cropped.save(webp_buffer, 'WEBP', quality=85, method=6)
+                webp_bytes = webp_buffer.getvalue()
+
+                crop_w2, crop_h2 = w // 2, h // 2
+                cropped_resized = cropped.resize((crop_w2, crop_h2), Image.LANCZOS)
+                webp_resized_buffer = io.BytesIO()
+                cropped_resized.save(webp_resized_buffer, 'WEBP', quality=85, method=6)
+                webp_resized_bytes = webp_resized_buffer.getvalue()
+
+                crop_path = f"{base_path}-crop{crop_num:03d}.webp"
+                crop_resized_path = f"{base_path}-crop{crop_num:03d}-{crop_w2}x{crop_h2}.webp"
+
+                await ckit_mongo.mongo_store_file(personal_mongo, crop_path, webp_bytes, 90 * 86400)
+                await ckit_mongo.mongo_store_file(personal_mongo, crop_resized_path, webp_resized_bytes, 90 * 86400)
+                existing_files.add(crop_resized_path)
+
+                logger.info(f"Saved crop {crop_num}: {crop_path} ({w}x{h} @ {x},{y})")
+                logger.info(f"Saved crop {crop_num} resized: {crop_resized_path}")
+
+                image_url1 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{crop_path}"
+                image_url2 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{crop_resized_path}"
+                results.append({
+                    "crop_num": crop_num,
+                    "full_path": crop_path,
+                    "resized_path": crop_resized_path,
+                    "url1": image_url1,
+                    "url2": image_url2,
+                })
+
+            result_text = f"Cropped {len(crops)} region(s) from {source_path}:\n\n"
+            for r in results:
+                result_text += f"Crop {r['crop_num']:03d} saved to MongoDB:\n"
+                result_text += f"  {r['full_path']}\n"
+                result_text += f"  {r['resized_path']}\n"
+                result_text += f"  Accessible via:\n"
+                result_text += f"    {r['url1']}\n"
+                result_text += f"    {r['url2']}\n"
+
+            response = [{"m_type": "text", "m_content": result_text}]
+            if results:
+                response.append({"m_type": "image/webp", "m_content": results[0]["url2"]})
+            return response
+
+    @rcx.on_tool_call(fi_mongo_store.MONGO_STORE_TOOL.name)
+    async def toolcall_mongo_store(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        return await fi_mongo_store.handle_mongo_store(rcx.workdir, personal_mongo, toolcall, model_produced_args)
 
     try:
         while not ckit_shutdown.shutdown_event.is_set():

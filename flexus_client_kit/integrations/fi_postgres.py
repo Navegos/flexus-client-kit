@@ -100,7 +100,7 @@ class IntegrationPostgres:
                     # If we have actual CSV data (not just command results like "DELETE 0")
                     timestamp = str(int(time.time()))
                     file_path = f"postgres/query_{timestamp}.csv"
-                    await ckit_mongo.store_file(self.personal_mongo, file_path, result_for_parsing.encode('utf-8'))
+                    await ckit_mongo.mongo_store_file(self.personal_mongo, file_path, result_for_parsing.encode('utf-8'), 7 * 86400)
 
                     first_3 = df.head(3).to_csv(index=False)
                     last_3 = df.tail(3).to_csv(index=False, header=False)

@@ -216,7 +216,8 @@ def format_cat_output(
     lines_range: str = ":",
     safety_valve: str = DEFAULT_SAFETY_VALVE
 ) -> str:
-    """Main function to format file data for display."""
+    # XXX this function should not exist, kill it with fire!
+    # use format_binary_output, format_text_output, format_json_output, no shape shifting code
     if file_data is None:
         return f"Error: File {path} has no content"
 
