@@ -96,7 +96,7 @@ class RobotContext:
         return handler
 
     def on_tool_call(self, tool_name: str):
-        def decorator(handler: Callable[[Dict[str, Any]], Awaitable[str]]):
+        def decorator(handler: Callable[[ckit_cloudtool.FCloudtoolCall, Dict[str, Any]], Awaitable[Union[str, List[Dict[str, str]]]]]):
             self._handler_per_tool[tool_name] = handler
             return handler
         return decorator
@@ -162,14 +162,25 @@ class RobotContext:
 
     async def _local_tool_call(self, fclient: ckit_client.FlexusClient, toolcall: ckit_cloudtool.FCloudtoolCall) -> None:
         logger.info("%s local_tool_call %s %s(%s) from thread %s" % (self.persona.persona_id, toolcall.fcall_id, toolcall.fcall_name, toolcall.fcall_arguments, toolcall.fcall_ft_id))
+        already_serialized = False
         try:
             args = json.loads(toolcall.fcall_arguments)
             if not isinstance(args, dict):
                 raise json.JSONDecodeError("Toplevel is not a dict")
             handler = self._handler_per_tool[toolcall.fcall_name]
             tool_result = await handler(toolcall, args)
-            if not isinstance(tool_result, str):
-                raise ValueError("Tool call handler must return a string, got instead: %r" % (tool_result,))
+            if isinstance(tool_result, list):  # Multimodal [{m_type: .., m_content: ...}, ...]
+                for item in tool_result:
+                    if not isinstance(item, dict):
+                        raise ValueError("Tool call handler returned list with non-dict item: %r" % (item,))
+                    if "m_type" not in item or "m_content" not in item:
+                        raise ValueError("Tool call handler list items must have m_type and m_content: %r" % (item,))
+                    if not isinstance(item["m_type"], str) or not isinstance(item["m_content"], str):
+                        raise ValueError("m_type and m_content must be strings: %r" % (item,))
+                tool_result = json.dumps(tool_result)
+                already_serialized = True
+            elif not isinstance(tool_result, str):
+                raise ValueError("Tool call handler must return a string or list, got instead: %r" % (tool_result,))
             if tool_result == "":
                 logger.warning("Tool call %s returned an empty string. Bad practice, model will not know what's happening!" % toolcall.fcall_name)
         except json.JSONDecodeError:
@@ -189,7 +200,8 @@ class RobotContext:
             tool_result = "Tool error, see logs for details"  # Not too much visible for end user
         prov = json.dumps({"system": fclient.service_name})
         if tool_result != "WAIT_SUBCHATS" and tool_result != "POSTED_NEED_CONFIRMATION" and tool_result != "ALREADY_POSTED_RESULT":
-            tool_result = json.dumps(tool_result)
+            if not already_serialized:
+                tool_result = json.dumps(tool_result)
             await ckit_cloudtool.cloudtool_post_result(fclient, toolcall.fcall_id, toolcall.fcall_untrusted_key, tool_result, prov)
 
 
