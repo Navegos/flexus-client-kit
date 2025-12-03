@@ -5,9 +5,10 @@ from pathlib import Path
 
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
+from flexus_client_kit import ckit_cloudtool
 
 from flexus_simple_bots import prompts_common
-from flexus_simple_bots.frog import frog_bot, frog_prompts
+from flexus_simple_bots.frog import frog_prompts
 
 
 BOT_DESCRIPTION = """
@@ -82,15 +83,18 @@ if msg["role"] == "assistant":
 async def install(
     client: ckit_client.FlexusClient,
     ws_id: str,
+    bot_name: str,
+    bot_version: str,
+    tools: list[ckit_cloudtool.CloudTool],
 ):
-    bot_internal_tools = json.dumps([t.openai_style_tool() for t in frog_bot.TOOLS])
+    bot_internal_tools = json.dumps([t.openai_style_tool() for t in tools])
     pic_big = base64.b64encode(open(Path(__file__).with_name("frog-1024x1536.webp"), "rb").read()).decode("ascii")
     pic_small = base64.b64encode(open(Path(__file__).with_name("frog-256x256.webp"), "rb").read()).decode("ascii")
     await ckit_bot_install.marketplace_upsert_dev_bot(
         client,
         ws_id=ws_id,
-        marketable_name=frog_bot.BOT_NAME,
-        marketable_version=frog_bot.BOT_VERSION,
+        marketable_name=bot_name,
+        marketable_version=bot_version,
         marketable_accent_color="#228B22",
         marketable_title1="Frog",
         marketable_title2="A cheerful frog bot that brings joy and positivity to your workspace.",
@@ -144,6 +148,7 @@ async def install(
 
 
 if __name__ == "__main__":
+    from flexus_simple_bots.frog import frog_bot
     args = ckit_bot_install.bot_install_argparse()
     client = ckit_client.FlexusClient("frog_install")
-    asyncio.run(install(client, ws_id=args.ws))
+    asyncio.run(install(client, ws_id=args.ws, bot_name=frog_bot.BOT_NAME, bot_version=frog_bot.BOT_VERSION, tools=frog_bot.TOOLS))

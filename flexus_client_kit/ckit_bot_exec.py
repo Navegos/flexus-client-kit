@@ -447,7 +447,7 @@ async def subscribe_and_produce_callbacks(
 
             elif upd.news_action == "INITIAL_UPDATES_OVER":
                 if len(bc.bots_running) == 0:
-                    logger.warning("backend knows of zero bots located in group %s, with marketable_name=%r and marketable_version=%r, if you are trying to run a dev bot, you might need to reinstall it after a version bump" % (
+                    logger.warning("backend knows of zero bots located in group %s, with marketable_name=%r and marketable_version=%r, if you are trying to run a dev bot, the previous dev bot might got upgraded to a build (not dev) version" % (
                         bc.fgroup_id, bc.marketable_name, bc.marketable_version
                     ))
                 handled = True
@@ -772,11 +772,23 @@ async def run_bots_in_this_group(
     *,
     fgroup_id: str,
     marketable_name: str,
-    marketable_version: int,
+    marketable_version_str: str,
     inprocess_tools: List[ckit_cloudtool.CloudTool],
     bot_main_loop: Callable[[ckit_client.FlexusClient, RobotContext], Awaitable[None]],
     scenario_fn: str,
+    install_func: Callable[[ckit_client.FlexusClient, str], Awaitable[None]],
 ) -> None:
+    marketable_version = ckit_client.marketplace_version_as_int(marketable_version_str)
+    if fclient.api_key:
+        # This is a dev bot, meaning it runs at bot author's console, using their api key
+        if not fclient.ws_id:
+            r = await ckit_client.query_basic_stuff(fclient)
+            for ws in r.workspaces:
+                logger.info("  Workspace %r, owned by %s, name %r" % (ws.ws_id, ws.ws_owner_fuser_id, ws.root_group_name))
+            logger.info("Please set FLEXUS_WORKSPACE to one of the above")
+            return
+        logger.info("Installing/updating bot %s in workspace %s", marketable_name, fclient.ws_id)
+        await install_func(fclient, fclient.ws_id, marketable_name, marketable_version_str, inprocess_tools)
     scenario = None
     scenario_task = None
     running_test_scenario = False

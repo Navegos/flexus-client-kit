@@ -27,10 +27,6 @@ export FLEXUS_API_BASEURL=https://flexus.team/
 FLEXUS_API_BASEURL_DEFAULT = "https://flexus.team/"
 
 
-def bot_service_name(bot_name: str, bot_version: int, operating_in_group: str):
-    assert isinstance(bot_version, int)
-    return f"{bot_name}_{bot_version}_{operating_in_group}"
-
 class FlexusClient:
     def __init__(self,
         service_name: str,
@@ -60,6 +56,7 @@ class FlexusClient:
         self.websocket_url = self.base_url_ws.rstrip("/") + endpoint
         self.endpoint = endpoint
         self.service_name = service_name
+        self.ws_id = os.getenv("FLEXUS_WORKSPACE")
         logger.info("FlexusClient service_name=%s api_key=%s %s", self.service_name, ("..." + self.api_key[-4:]) if self.api_key else "None", self.http_url)
         if have_api_key:
             assert not have_api_key.startswith("http:")
@@ -121,6 +118,12 @@ def marketplace_version_as_str(v: int) -> str:
     b = remainder // 10_000
     c = remainder % 10_000
     return f"{a}.{b}.{c}"
+
+
+def bot_service_name(bot_name: str, bot_version: str, operating_in_group: str):
+    assert isinstance(bot_version, str)
+    bot_version_int = marketplace_version_as_int(bot_version)
+    return f"{bot_name}_{bot_version}_{operating_in_group}"
 
 
 @dataclass
