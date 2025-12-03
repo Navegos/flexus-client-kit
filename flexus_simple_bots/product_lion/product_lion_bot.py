@@ -17,7 +17,6 @@ logger = logging.getLogger("bot_product_lion")
 
 BOT_NAME = "product_lion"
 BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
-BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
 
 FIRST_PRINCIPLES_CANVAS_TOOL = ckit_cloudtool.CloudTool(
@@ -556,16 +555,17 @@ async def product_lion_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bo
 
 def main():
     group, scenario_fn = ckit_bot_exec.parse_bot_args()
-    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT, group), endpoint="/v1/jailed-bot")
+    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION, group), endpoint="/v1/jailed-bot")
 
     asyncio.run(ckit_bot_exec.run_bots_in_this_group(
         fclient,
         marketable_name=BOT_NAME,
-        marketable_version=BOT_VERSION_INT,
+        marketable_version_str=BOT_VERSION,
         fgroup_id=group,
         bot_main_loop=product_lion_main_loop,
         inprocess_tools=TOOLS,
         scenario_fn=scenario_fn,
+        install_func=product_lion_install.install,
     ))
 
 

@@ -2,12 +2,14 @@ import asyncio
 import json
 import base64
 from pathlib import Path
+from typing import List
 
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
+from flexus_client_kit import ckit_cloudtool
 
 from flexus_simple_bots import prompts_common
-from flexus_simple_bots.boss import boss_bot, boss_prompts
+from flexus_simple_bots.boss import boss_prompts
 
 
 boss_setup_schema = [
@@ -59,8 +61,11 @@ with your vision.
 async def install(
     client: ckit_client.FlexusClient,
     ws_id: str,
+    bot_name: str,
+    bot_version: str,
+    tools: List[ckit_cloudtool.CloudTool],
 ):
-    bot_internal_tools = json.dumps([t.openai_style_tool() for t in boss_bot.TOOLS])
+    bot_internal_tools = json.dumps([t.openai_style_tool() for t in tools])
     with open(Path(__file__).with_name("boss-1024x1536.webp"), "rb") as f:
         big = base64.b64encode(f.read()).decode("ascii")
     with open(Path(__file__).with_name("boss-256x256.webp"), "rb") as f:
@@ -69,9 +74,9 @@ async def install(
     await ckit_bot_install.marketplace_upsert_dev_bot(
         client,
         ws_id=ws_id,
-        marketable_name=boss_bot.BOT_NAME,
-        marketable_version=boss_bot.BOT_VERSION,
-        marketable_accent_color=boss_bot.ACCENT_COLOR,
+        marketable_name=bot_name,
+        marketable_version=bot_version,
+        marketable_accent_color="#8B4513",
         marketable_title1="Boss",
         marketable_title2="The Boss manages your bot army - keeps them focused, productive, and on-strategy",
         marketable_author="Flexus",
@@ -115,6 +120,7 @@ async def install(
 
 
 if __name__ == "__main__":
+    from flexus_simple_bots.boss import boss_bot
     args = ckit_bot_install.bot_install_argparse()
     client = ckit_client.FlexusClient("boss_install")
-    asyncio.run(install(client, ws_id=args.ws))
+    asyncio.run(install(client, ws_id=args.ws, bot_name=boss_bot.BOT_NAME, bot_version=boss_bot.BOT_VERSION, tools=boss_bot.TOOLS))

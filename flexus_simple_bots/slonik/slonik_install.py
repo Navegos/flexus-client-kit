@@ -2,11 +2,13 @@ import asyncio
 import json
 import base64
 from pathlib import Path
+from typing import List
 
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
+from flexus_client_kit import ckit_cloudtool
 
-from flexus_simple_bots.slonik import slonik_bot, slonik_prompts
+from flexus_simple_bots.slonik import slonik_prompts
 
 
 slonik_setup_schema = [
@@ -20,8 +22,14 @@ slonik_setup_schema = [
     },
 ]
 
-async def install(client: ckit_client.FlexusClient, ws_id: str):
-    bot_internal_tools = json.dumps([t.openai_style_tool() for t in slonik_bot.TOOLS])
+async def install(
+    client: ckit_client.FlexusClient,
+    ws_id: str,
+    bot_name: str,
+    bot_version: str,
+    tools: List[ckit_cloudtool.CloudTool],
+):
+    bot_internal_tools = json.dumps([t.openai_style_tool() for t in tools])
     with open(Path(__file__).with_name("slonik-1024x1536.webp"), "rb") as f:
         big = base64.b64encode(f.read()).decode("ascii")
     with open(Path(__file__).with_name("slonik-256x256.webp"), "rb") as f:
@@ -30,9 +38,9 @@ async def install(client: ckit_client.FlexusClient, ws_id: str):
     await ckit_bot_install.marketplace_upsert_dev_bot(
         client,
         ws_id=ws_id,
-        marketable_name=slonik_bot.BOT_NAME,
-        marketable_version=slonik_bot.BOT_VERSION,
-        marketable_accent_color=slonik_bot.ACCENT_COLOR,
+        marketable_name=bot_name,
+        marketable_version=bot_version,
+        marketable_accent_color="#336791",
         marketable_title1="Slonik",
         marketable_title2="Database assistant for PostgreSQL operations.",
         marketable_author="Flexus",
@@ -75,6 +83,7 @@ async def install(client: ckit_client.FlexusClient, ws_id: str):
 
 
 if __name__ == "__main__":
+    from flexus_simple_bots.slonik import slonik_bot
     args = ckit_bot_install.bot_install_argparse()
     client = ckit_client.FlexusClient("slonik_install")
-    asyncio.run(install(client, ws_id=args.ws))
+    asyncio.run(install(client, ws_id=args.ws, bot_name=slonik_bot.BOT_NAME, bot_version=slonik_bot.BOT_VERSION, tools=slonik_bot.TOOLS))

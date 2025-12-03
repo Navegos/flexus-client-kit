@@ -2,13 +2,15 @@ import asyncio
 import json
 import base64
 from pathlib import Path
+from typing import List
 
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
+from flexus_client_kit import ckit_cloudtool
 from flexus_client_kit.integrations import fi_jira
 
 from flexus_simple_bots import prompts_common
-from flexus_simple_bots.clerkwing import clerkwing_bot, clerkwing_prompts
+from flexus_simple_bots.clerkwing import clerkwing_prompts
 
 
 BOT_DESCRIPTION = """
@@ -37,16 +39,19 @@ clerkwing_setup_schema = fi_jira.JIRA_SETUP_SCHEMA
 async def install(
     client: ckit_client.FlexusClient,
     ws_id: str,
+    bot_name: str,
+    bot_version: str,
+    tools: List[ckit_cloudtool.CloudTool],
 ):
-    bot_internal_tools = json.dumps([t.openai_style_tool() for t in clerkwing_bot.TOOLS])
+    bot_internal_tools = json.dumps([t.openai_style_tool() for t in tools])
     pic_big = base64.b64encode(open(Path(__file__).with_name("clerkwing-1024x1536.webp"), "rb").read()).decode("ascii")
     pic_small = base64.b64encode(open(Path(__file__).with_name("clerkwing-256x256.webp"), "rb").read()).decode("ascii")
 
     await ckit_bot_install.marketplace_upsert_dev_bot(
         client,
         ws_id=ws_id,
-        marketable_name=clerkwing_bot.BOT_NAME,
-        marketable_version=clerkwing_bot.BOT_VERSION,
+        marketable_name=bot_name,
+        marketable_version=bot_version,
         marketable_accent_color="#2B4341",
         marketable_title1="Clerkwing",
         marketable_title2="Your helpful secretary robot for email, calendar, and Jira management.",
@@ -93,6 +98,7 @@ async def install(
 
 
 if __name__ == "__main__":
+    from flexus_simple_bots.clerkwing import clerkwing_bot
     args = ckit_bot_install.bot_install_argparse()
     client = ckit_client.FlexusClient("clerkwing_install")
-    asyncio.run(install(client, ws_id=args.ws))
+    asyncio.run(install(client, ws_id=args.ws, bot_name=clerkwing_bot.BOT_NAME, bot_version=clerkwing_bot.BOT_VERSION, tools=clerkwing_bot.TOOLS))

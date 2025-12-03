@@ -3,14 +3,16 @@ import json
 import base64
 import io
 from pathlib import Path
+from typing import List
 
 from PIL import Image
 
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
+from flexus_client_kit import ckit_cloudtool
 
 from flexus_simple_bots import prompts_common
-from flexus_simple_bots.lawyerrat import lawyerrat_bot, lawyerrat_prompts
+from flexus_simple_bots.lawyerrat import lawyerrat_prompts
 
 
 BOT_DESCRIPTION = """
@@ -97,8 +99,11 @@ if msg["role"] == "assistant":
 async def install(
     client: ckit_client.FlexusClient,
     ws_id: str,
+    bot_name: str,
+    bot_version: str,
+    tools: List[ckit_cloudtool.CloudTool],
 ):
-    bot_internal_tools = json.dumps([t.openai_style_tool() for t in lawyerrat_bot.TOOLS])
+    bot_internal_tools = json.dumps([t.openai_style_tool() for t in tools])
 
     pic_big_path = Path(__file__).with_name("lawyerrat-1024x1536.webp")
     pic_small_path = Path(__file__).with_name("lawyerrat-256x256.webp")
@@ -124,8 +129,8 @@ async def install(
     await ckit_bot_install.marketplace_upsert_dev_bot(
         client,
         ws_id=ws_id,
-        marketable_name=lawyerrat_bot.BOT_NAME,
-        marketable_version=lawyerrat_bot.BOT_VERSION,
+        marketable_name=bot_name,
+        marketable_version=bot_version,
         marketable_accent_color="#8B4513",
         marketable_title1="LawyerRat",
         marketable_title2="A thorough legal research and document assistant with meticulous attention to detail.",
@@ -172,6 +177,7 @@ async def install(
 
 
 if __name__ == "__main__":
+    from flexus_simple_bots.lawyerrat import lawyerrat_bot
     args = ckit_bot_install.bot_install_argparse()
     client = ckit_client.FlexusClient("lawyerrat_install")
-    asyncio.run(install(client, ws_id=args.ws))
+    asyncio.run(install(client, ws_id=args.ws, bot_name=lawyerrat_bot.BOT_NAME, bot_version=lawyerrat_bot.BOT_VERSION, tools=lawyerrat_bot.TOOLS))

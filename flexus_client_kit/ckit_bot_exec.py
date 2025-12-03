@@ -787,7 +787,7 @@ async def run_bots_in_this_group(
                 logger.info("  Workspace %r, owned by %s, name %r" % (ws.ws_id, ws.ws_owner_fuser_id, ws.root_group_name))
             logger.info("Please set FLEXUS_WORKSPACE to one of the above")
             return
-        logger.info("Installing/updating bot %s in workspace %s", marketable_name, fclient.ws_id)
+        logger.info("Installing %s:%s into workspace %s", marketable_name, marketable_version_str, fclient.ws_id)
         await install_func(fclient, fclient.ws_id, marketable_name, marketable_version_str, inprocess_tools)
     scenario = None
     scenario_task = None

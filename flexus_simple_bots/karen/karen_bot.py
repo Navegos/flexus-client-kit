@@ -21,7 +21,6 @@ logger = logging.getLogger("bot_karen")
 
 BOT_NAME = "karen"
 BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
-BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
 TOOLS = [fi_slack.SLACK_TOOL, fi_discord2.DISCORD_TOOL, fi_repo_file.REPO_FILE_TOOL]
 
@@ -132,15 +131,16 @@ async def karen_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.
 
 def main():
     group, scenario_fn = ckit_bot_exec.parse_bot_args()
-    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT, group), endpoint="/v1/jailed-bot")
+    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION, group), endpoint="/v1/jailed-bot")
     asyncio.run(ckit_bot_exec.run_bots_in_this_group(
         fclient,
         marketable_name=BOT_NAME,
-        marketable_version=BOT_VERSION_INT,
+        marketable_version_str=BOT_VERSION,
         fgroup_id=group,
         bot_main_loop=karen_main_loop,
         inprocess_tools=TOOLS,
         scenario_fn=scenario_fn,
+        install_func=karen_install.install,
     ))
 
 

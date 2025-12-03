@@ -2,12 +2,14 @@ import asyncio
 import json
 import base64
 from pathlib import Path
+from typing import List
 
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
+from flexus_client_kit import ckit_cloudtool
 
 from flexus_simple_bots import prompts_common
-from flexus_simple_bots.product_lion import product_lion_bot, product_lion_prompts
+from flexus_simple_bots.product_lion import product_lion_prompts
 
 
 BOT_DESCRIPTION = """
@@ -49,15 +51,18 @@ product_lion_setup_schema = [
 async def install(
     client: ckit_client.FlexusClient,
     ws_id: str,
+    bot_name: str,
+    bot_version: str,
+    tools: List[ckit_cloudtool.CloudTool],
 ):
-    bot_internal_tools = json.dumps([t.openai_style_tool() for t in product_lion_bot.TOOLS])
+    bot_internal_tools = json.dumps([t.openai_style_tool() for t in tools])
     pic_big = base64.b64encode(open(Path(__file__).with_name("product_lion-1024x1536.webp"), "rb").read()).decode("ascii")
     pic_small = base64.b64encode(open(Path(__file__).with_name("product_lion-256x256.webp"), "rb").read()).decode("ascii")
     await ckit_bot_install.marketplace_upsert_dev_bot(
         client,
         ws_id=ws_id,
-        marketable_name=product_lion_bot.BOT_NAME,
-        marketable_version=product_lion_bot.BOT_VERSION,
+        marketable_name=bot_name,
+        marketable_version=bot_version,
         marketable_accent_color="#E2A94A",
         marketable_title1="Product Lion v0.5",
         marketable_title2="Silent tool execution + checks existing ideas first. Conversational coach for A1/A2.",
@@ -101,8 +106,9 @@ async def install(
 
 
 if __name__ == "__main__":
+    from flexus_simple_bots.product_lion import product_lion_bot
     args = ckit_bot_install.bot_install_argparse()
     client = ckit_client.FlexusClient("product_lion_install")
     print(f"Installing product_lion to workspace {args.ws}...")
-    asyncio.run(install(client, ws_id=args.ws))
+    asyncio.run(install(client, ws_id=args.ws, bot_name=product_lion_bot.BOT_NAME, bot_version=product_lion_bot.BOT_VERSION, tools=product_lion_bot.TOOLS))
     print("[OK] Product Lion v0.5 installed successfully!")

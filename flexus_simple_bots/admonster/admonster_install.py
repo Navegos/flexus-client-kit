@@ -18,11 +18,13 @@ import asyncio
 import json
 import base64
 from pathlib import Path
+from typing import List
 
 from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
+from flexus_client_kit import ckit_cloudtool
 
-from flexus_simple_bots.admonster import admonster_bot, admonster_prompts
+from flexus_simple_bots.admonster import admonster_prompts
 
 
 # Setup schema - defines configuration fields shown in bot's setup UI
@@ -47,17 +49,23 @@ admonster_setup_schema = [
 ]
 
 
-async def install(client: ckit_client.FlexusClient, ws_id: str):
+async def install(
+    client: ckit_client.FlexusClient,
+    ws_id: str,
+    bot_name: str,
+    bot_version: str,
+    tools: List[ckit_cloudtool.CloudTool],
+):
     """
     Register or update AdMonster bot in the marketplace.
-    
+
     Args:
         client: Authenticated Flexus client
         ws_id: Target workspace ID (bot becomes available in this workspace)
     """
     # Convert tool definitions to OpenAI-style format for the AI model
-    bot_internal_tools = json.dumps([t.openai_style_tool() for t in admonster_bot.TOOLS])
-    
+    bot_internal_tools = json.dumps([t.openai_style_tool() for t in tools])
+
     # Load bot images (marketplace display)
     with open(Path(__file__).with_name("ad_monster-1024x1536.webp"), "rb") as f:
         big = base64.b64encode(f.read()).decode("ascii")
@@ -67,9 +75,9 @@ async def install(client: ckit_client.FlexusClient, ws_id: str):
     await ckit_bot_install.marketplace_upsert_dev_bot(
         client,
         ws_id=ws_id,
-        marketable_name=admonster_bot.BOT_NAME,
-        marketable_version=admonster_bot.BOT_VERSION,
-        marketable_accent_color=admonster_bot.ACCENT_COLOR,
+        marketable_name=bot_name,
+        marketable_version=bot_version,
+        marketable_accent_color="#0077B5",
         
         # Marketplace display text
         marketable_title1="Ad Monster",
@@ -139,6 +147,7 @@ async def install(client: ckit_client.FlexusClient, ws_id: str):
 
 
 if __name__ == "__main__":
+    from flexus_simple_bots.admonster import admonster_bot
     args = ckit_bot_install.bot_install_argparse()
     client = ckit_client.FlexusClient("admonster_install")
-    asyncio.run(install(client, ws_id=args.ws))
+    asyncio.run(install(client, ws_id=args.ws, bot_name=admonster_bot.BOT_NAME, bot_version=admonster_bot.BOT_VERSION, tools=admonster_bot.TOOLS))
