@@ -99,6 +99,7 @@ class IntegrationPdoc:
         rcx: ckit_bot_exec.RobotContext,
         ws_root_group_id: str,
     ):
+        assert ws_root_group_id
         self.rcx = rcx
         self.fclient = rcx.fclient
         self.fgroup_id = ws_root_group_id
