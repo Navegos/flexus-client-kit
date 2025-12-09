@@ -9,6 +9,7 @@ from flexus_client_kit import ckit_shutdown
 from flexus_client_kit import ckit_ask_model
 from flexus_client_kit import ckit_kanban
 from flexus_client_kit.integrations import fi_pdoc
+from flexus_simple_bots.owl_strategist import owl_strategist_install
 from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
 
 logger = logging.getLogger("bot_owl_strategist")
@@ -171,14 +172,15 @@ Read previous result from /strategies/{strategy_name}/{agent}.json, apply the fe
 
 def main():
     scenario_fn = ckit_bot_exec.parse_bot_args()
-    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION_INT), endpoint="/v1/jailed-bot")
+    fclient = ckit_client.FlexusClient(ckit_client.bot_service_name(BOT_NAME, BOT_VERSION), endpoint="/v1/jailed-bot")
     asyncio.run(ckit_bot_exec.run_bots_in_this_group(
         fclient,
         marketable_name=BOT_NAME,
-        marketable_version=BOT_VERSION_INT,
+        marketable_version_str=BOT_VERSION,
         bot_main_loop=owl_strategist_main_loop,
         inprocess_tools=TOOLS,
         scenario_fn=scenario_fn,
+        install_func=owl_strategist_install.install,
     ))
 
 
