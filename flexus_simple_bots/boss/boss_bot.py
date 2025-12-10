@@ -14,6 +14,7 @@ from flexus_client_kit import ckit_mongo
 from flexus_client_kit import ckit_utils
 from flexus_client_kit.integrations import fi_mongo_store
 from flexus_client_kit.integrations import fi_pdoc
+from flexus_client_kit.integrations import fi_widget
 from flexus_simple_bots.boss import boss_install
 from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
 
@@ -107,6 +108,7 @@ TOOLS = [
     # BOSS_SETUP_COLLEAGUES_TOOL,
     THREAD_MESSAGES_PRINTED_TOOL,
     # BOT_BUG_REPORT_TOOL,
+    fi_widget.PRINT_WIDGET_TOOL,
     fi_mongo_store.MONGO_STORE_TOOL,
     fi_pdoc.POLICY_DOCUMENT_TOOL
 ]
@@ -338,6 +340,10 @@ async def boss_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.R
     # @rcx.on_tool_call(BOT_BUG_REPORT_TOOL.name)
     # async def toolcall_bot_bug_report(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
     #     return await handle_bot_bug_report(fclient, rcx.persona.ws_id, model_produced_args)
+
+    @rcx.on_tool_call(fi_widget.PRINT_WIDGET_TOOL.name)
+    async def toolcall_print_widget(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        return await fi_widget.handle_print_widget(toolcall, model_produced_args)
 
     @rcx.on_tool_call(fi_mongo_store.MONGO_STORE_TOOL.name)
     async def toolcall_mongo_store(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:

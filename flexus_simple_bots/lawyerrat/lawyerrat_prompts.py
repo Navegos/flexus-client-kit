@@ -61,6 +61,4 @@ Help the user understand that LawyerRat is a legal research and document assista
 4. Provides well-researched legal information (not legal advice)
 
 The bot can be customized for different legal specialties and formality levels to match your workflow.
-
-Once the setup is completed, you can call print_chat_restart_widget() for the user to test the new settings.
 """

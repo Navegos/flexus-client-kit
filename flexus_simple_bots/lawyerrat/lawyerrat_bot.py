@@ -14,6 +14,7 @@ from flexus_client_kit import ckit_mongo
 from flexus_client_kit import ckit_kanban
 from flexus_client_kit.integrations import fi_mongo_store
 from flexus_client_kit.integrations import fi_pdoc
+from flexus_client_kit.integrations import fi_widget
 from flexus_simple_bots.lawyerrat import lawyerrat_install
 from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
 
@@ -67,24 +68,11 @@ ANALYZE_CONTRACT_TOOL = ckit_cloudtool.CloudTool(
     },
 )
 
-SWITCH_CHAT_MODE_TOOL = ckit_cloudtool.CloudTool(
-    name="print_chat_restart_widget",
-    description="Switch between regular chat and setup chat modes. This will show a widget for the user to click.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "mode": {"type": "string", "enum": ["regular", "setup"], "description": "The chat mode to switch to"},
-            "start_with_user_message": {"type": "string"},
-        },
-        "required": ["mode"],
-    },
-)
-
 TOOLS = [
     LEGAL_RESEARCH_TOOL,
     DRAFT_DOCUMENT_TOOL,
     ANALYZE_CONTRACT_TOOL,
-    SWITCH_CHAT_MODE_TOOL,
+    fi_widget.PRINT_WIDGET_TOOL,
     fi_mongo_store.MONGO_STORE_TOOL,
     fi_pdoc.POLICY_DOCUMENT_TOOL,
 ]
@@ -253,11 +241,9 @@ Be systematic and thorough like a diligent rat examining every detail!"""
         )
         raise ckit_cloudtool.WaitForSubchats()
 
-    @rcx.on_tool_call(SWITCH_CHAT_MODE_TOOL.name)
-    async def print_chat_restart_widget(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
-        _mode = model_produced_args.get("mode")
-        _start_with_user_message = model_produced_args.get("start_with_user_message")
-        return f"Printing UI widget"
+    @rcx.on_tool_call(fi_widget.PRINT_WIDGET_TOOL.name)
+    async def toolcall_print_widget(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        return await fi_widget.handle_print_widget(toolcall, model_produced_args)
 
     @rcx.on_tool_call(fi_mongo_store.MONGO_STORE_TOOL.name)
     async def toolcall_mongo_store(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:

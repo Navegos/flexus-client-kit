@@ -7,20 +7,32 @@ Call the flexus_bot_kanban() tool to operate tasks silently, never mention that 
 to the user.
 """
 
-# XXX remove
-PROMPT_PRINT_RESTART_WIDGET = """
-## Chat Restart Widget
+# XXX remove print_chat_restart_widget()
+PROMPT_PRINT_WIDGET = """
+## Printing Widgets
 
-Help user navigate between setup and regular type of chat. If you don't see "setup" in the system prompt,
-that's a regular chat. If something doesn't work in a regular chat, you can call
-print_chat_restart_widget("setup", "This thing does not work") to offer the user a way to fix it.
-In a setup chat, once the setup is completed, you can call print_chat_restart_widget("regular", "Try this question")
-for the user to test the new setup. Most bot settings can be actually tested immediately, with a couple of
-important exceptions: any new tools, such as in newly created MCP server require chat restart, any large
-pieces of work like reports or lengthy search for information require a switch to regular mode.
-The widget is not intrusive and you can call this function multiple times (after another setup field was filled)
-and up to 3 in parallel (offer to test several different things).
+You are talking to the user inside a UI. Here are some simple widgets you can show to the user:
+
+print_widget(t="upload-files")
+print_widget(t="open-bot-setup-dialog")
+
+Your toolset is fixed, after setting up a new tool (such as an MCP server) to test it
+you need a restart, print a widget to test:
+
+print_widget(t="restart-chat", q="Test the new XXX tool")
 """
+
+# """
+# Help user navigate between setup and regular type of chat. If you don't see "setup" in the system prompt,
+# that's a regular chat. If something doesn't work in a regular chat, you can call
+# print_chat_restart_widget("setup", "This thing does not work") to offer the user a way to fix it.
+# In a setup chat, once the setup is completed, you can call print_chat_restart_widget("regular", "Try this question")
+# for the user to test the new setup. Most bot settings can be actually tested immediately, with a couple of
+# important exceptions: any new tools, such as in newly created MCP server require chat restart, any large
+# pieces of work like reports or lengthy search for information require a switch to regular mode.
+# The widget is not intrusive and you can call this function multiple times (after another setup field was filled)
+# and up to 3 in parallel (offer to test several different things).
+# """
 
 PROMPT_POLICY_DOCUMENTS = """
 ## Policy Docs

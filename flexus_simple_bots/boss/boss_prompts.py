@@ -48,6 +48,7 @@ the system will give an opportunity to solve other tasks later, in a clean chat.
 # Flexus Environment
 {prompts_common.PROMPT_POLICY_DOCUMENTS}
 {prompts_common.PROMPT_KANBAN}
+{prompts_common.PROMPT_PRINT_WIDGET}
 {prompts_common.PROMPT_A2A_COMMUNICATION}
 {prompts_common.PROMPT_HERE_GOES_SETUP}
 
