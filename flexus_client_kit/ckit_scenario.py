@@ -60,32 +60,6 @@ class BotScenarioUpsertInput:
     btest_cost: int
 
 
-MARKETPLACE_DEV_STAGES = ["MARKETPLACE_DEV", "MARKETPLACE_WAITING_IMAGE", "MARKETPLACE_FAILED_IMAGE_BUILD"]
-
-
-async def scenario_select_workspace(
-    fclient: ckit_client.FlexusClient,
-    bs: ckit_client.BasicStuffOutput,
-    marketable_name: Optional[str] = None,
-) -> ckit_client.FWorkspaceOutput:
-    '''Find ws with marketable_name available for dev, fallback to any ws with have_admin, or the first one'''
-    if marketable_name:
-        for w in bs.workspaces:
-            if w.have_admin:
-                async with (await fclient.use_http()) as http:
-                    details = await http.execute(gql.gql("""
-                        query MarketplaceDetails($ws_id: String!, $marketable_name: String!) {
-                            marketplace_details(ws_id: $ws_id, marketable_name: $marketable_name) {
-                                versions { marketable_stage }
-                            }
-                        }"""), variable_values={"ws_id": w.ws_id, "marketable_name": marketable_name})
-
-                    versions = details["marketplace_details"]["versions"]
-                    if any(v["marketable_stage"] in MARKETPLACE_DEV_STAGES for v in versions):
-                        return w
-    return next((w for w in bs.workspaces if w.have_admin), bs.workspaces[0])
-
-
 async def scenario_generate_human_message(
     client: ckit_client.FlexusClient,
     happy_trajectory: str,
@@ -306,11 +280,24 @@ class ScenarioSetup:
         persona_setup: dict,
         group_prefix: str = "test",
     ) -> None:
-        bs = await ckit_client.query_basic_stuff(self.fclient)
-        self.ws = await scenario_select_workspace(self.fclient, bs, marketable_name)
+        if not self.fclient.ws_id:
+            raise RuntimeError("FLEXUS_WORKSPACE environment variable is not set")
 
-        self.fgroup_name = f"{group_prefix}-{uuid.uuid4().hex[:6]}"
         async with (await self.fclient.use_http()) as http:
+            ws_query = await http.execute(gql.gql(f"""
+                query GetWorkspace {{
+                    query_basic_stuff(want_invitations: false) {{
+                        workspaces {{
+                            {gql_utils.gql_fields(ckit_client.FWorkspaceOutput)}
+                        }}
+                    }}
+                }}"""))
+            workspaces = [gql_utils.dataclass_from_dict(w, ckit_client.FWorkspaceOutput) for w in ws_query["query_basic_stuff"]["workspaces"]]
+            self.ws = next((w for w in workspaces if w.ws_id == self.fclient.ws_id), None)
+            if not self.ws:
+                raise RuntimeError(f"Workspace {self.fclient.ws_id} not found in user's workspaces")
+
+            self.fgroup_name = f"{group_prefix}-{uuid.uuid4().hex[:6]}"
             self.fgroup_id = (await http.execute(gql.gql("""
                 mutation CreateGroup($input: FlexusGroupInput!) {
                     group_create(input: $input) { fgroup_id }
