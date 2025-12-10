@@ -41,10 +41,17 @@ class FlexusClient:
             ckit_logs.setup_logger()
         have_api_key = api_key or os.getenv("FLEXUS_API_KEY")
         self.use_ws_ticket = os.getenv("FLEXUS_WS_TICKET") is not None
+        self.dev_ws_ticket = None
+        self.endpoint = endpoint
+        self.service_name = service_name
+        self.ws_id = os.getenv("FLEXUS_WORKSPACE")
+        self.inside_radix_process = self.ws_id is not None and (len(self.ws_id) in [0, 1, 2])
+        if self.inside_radix_process:
+            self.service_name = f"{self.service_name}_r_{self.ws_id}"
         if superuser:
-            assert endpoint != "/v1/graphql", "Whoops superuser set but it's regular endpoint"
+            assert endpoint != "/v1/graphql", "Whoops superuser set but it's the regular endpoint"
             self.api_key = None
-        elif self.use_ws_ticket:
+        elif self.use_ws_ticket or self.inside_radix_process:
             self.api_key = None
         else:
             assert have_api_key, "Set FLEXUS_API_KEY you can generate on your personal profile page."
@@ -54,12 +61,6 @@ class FlexusClient:
         self.base_url_ws = self.base_url_http.replace("https://", "wss://").replace("http://", "ws://")
         self.http_url = self.base_url_http.rstrip("/") + endpoint
         self.websocket_url = self.base_url_ws.rstrip("/") + endpoint
-        self.endpoint = endpoint
-        self.service_name = service_name
-        self.ws_id = os.getenv("FLEXUS_WORKSPACE")
-        if os.getenv("FLEXUS_IS_RADIX_WORKSPACE") and self.ws_id:
-            self.service_name = f"{self.service_name}_r_{self.ws_id}"
-
         logger.info("FlexusClient service_name=%s api_key=%s %s", self.service_name, ("..." + self.api_key[-4:]) if self.api_key else "None", self.http_url)
         if have_api_key:
             assert not have_api_key.startswith("http:")
@@ -72,7 +73,7 @@ class FlexusClient:
                 "x-flexus-service-name": self.service_name,
             }
         elif self.use_ws_ticket:
-            ws_ticket = await ckit_passwords.get_flexus_ws_ticket(self.service_name)
+            ws_ticket = self.dev_ws_ticket or (await ckit_passwords.get_flexus_ws_ticket(self.service_name))
             headers = {
                 "x-flexus-ws-ticket": ws_ticket,
                 "x-flexus-service-name": self.service_name
@@ -93,7 +94,7 @@ class FlexusClient:
                 "x-flexus-service-name": self.service_name,
             }
         elif self.use_ws_ticket:
-            ws_ticket = await ckit_passwords.get_flexus_ws_ticket(self.service_name)
+            ws_ticket = self.dev_ws_ticket or (await ckit_passwords.get_flexus_ws_ticket(self.service_name))
             payload = {
                 "x-flexus-ws-ticket": ws_ticket,
                 "x-flexus-service-name": self.service_name

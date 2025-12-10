@@ -14,6 +14,7 @@ import gql.transport.exceptions
 
 from flexus_client_kit import ckit_client, gql_utils, ckit_service_exec, ckit_kanban, ckit_cloudtool
 from flexus_client_kit import ckit_ask_model, ckit_shutdown, ckit_utils, ckit_bot_query, ckit_scenario
+from flexus_client_kit import ckit_passwords
 from flexus_client_kit import erp_schema
 
 
@@ -816,7 +817,10 @@ async def run_bots_in_this_group(
     subscribe_to_erp_tables: List[str] = [],
 ) -> None:
     marketable_version = ckit_client.marketplace_version_as_int(marketable_version_str)
-    if fclient.api_key:
+    if fclient.use_ws_ticket:
+        ws_id_prefix = fclient.ws_id
+
+    elif fclient.api_key:
         # This is a dev bot, meaning it runs at bot author's console, using their api key
         if not fclient.ws_id:
             r = await ckit_client.query_basic_stuff(fclient)
@@ -827,10 +831,16 @@ async def run_bots_in_this_group(
         logger.info("Installing %s:%s into workspace %s", marketable_name, marketable_version_str, fclient.ws_id)
         await install_func(fclient, fclient.ws_id, marketable_name, marketable_version_str, inprocess_tools)
         ws_id_prefix = fclient.ws_id
-    elif fclient.use_ws_ticket:
+
+    elif fclient.inside_radix_process:
+        # Dev computer, detected by absence of FLEXUS_WS_TICKET, for testing a radix process
+        superpassword, _ = await ckit_passwords.get_superuser_token_from_vault(fclient.endpoint)
+        fclient.dev_ws_ticket = ckit_passwords.make_flexus_ws_ticket_from_creds(fclient.service_name, superpassword)
         ws_id_prefix = fclient.ws_id
+
     else:
         assert False
+
     scenario = None
     scenario_task = None
     running_test_scenario = False
