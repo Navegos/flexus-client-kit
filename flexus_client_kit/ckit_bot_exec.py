@@ -260,15 +260,18 @@ async def i_am_still_alive(
         try:
             http_client = await fclient.use_http()
             async with http_client as http:
+                # group_id takes priority over ws_id, send only one (not both)
+                use_group_id = fclient.group_id if fclient.group_id else None
+                use_ws_id_prefix = None if use_group_id else fclient.ws_id
                 await http.execute(
-                    gql.gql("""mutation BotConfirmExists($marketable_name: String!, $marketable_version: Int!, $ws_id_prefix: String!) {
-                        bot_confirm_exists(marketable_name: $marketable_name, marketable_version: $marketable_version, ws_id_prefix: $ws_id_prefix)
+                    gql.gql("""mutation BotConfirmExists($marketable_name: String!, $marketable_version: Int!, $ws_id_prefix: String, $group_id: String) {
+                        bot_confirm_exists(marketable_name: $marketable_name, marketable_version: $marketable_version, ws_id_prefix: $ws_id_prefix, group_id: $group_id)
                     }"""),
                     variable_values={
                         "marketable_name": marketable_name,
                         "marketable_version": marketable_version,
-                        "ws_id_prefix": fclient.ws_id,
-                        "group_id": fclient.group_id,
+                        "ws_id_prefix": use_ws_id_prefix,
+                        "group_id": use_group_id,
                     },
                 )
                 logger.info("i_am_still_alive %s:%d %s=%s", marketable_name, marketable_version, "ws_id" if fclient.ws_id else "group_id", fclient.ws_id or fclient.group_id)
