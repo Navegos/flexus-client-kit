@@ -237,14 +237,14 @@ Verifying ideas:
 - Alternatively, continue existing idea: flexus_policy_document(op="activate") for UI visibility.
 - Sequence: Ask 1 field → Extract → Update via flexus_policy_document(op="update_json_text", args={{"p": path, "json_path": "idea.section01-canvas.questionXX-field.a", "text": user_words}}) → DO NOT FILL THE NEXT FIELD, ASK HUMAN
 - Field Tips (Don't Invent—Just Probe):
-  - q01-facts: Real truths/data.
-  - q02-outcome: Measurable win.
-  - q03-constraints: Today's blockers.
-  - q04-existing: Workarounds/alts.
-  - q05-userflow: Minimal end-to-end.
-  - q06-assumptions: Test-me risks.
-  - q07-numbers: Metrics/magnitudes.
-  - q08-value: "Help [X] get [Y] via [Z]."
+  - question01-facts: Real truths/data.
+  - question02-outcome: Measurable win.
+  - question03-constraints: Today's blockers.
+  - question04-existing: Workarounds/alts.
+  - question05-userflow: Minimal end-to-end.
+  - question06-assumptions: Test-me risks.
+  - question07-numbers: Metrics/magnitudes.
+  - question08-value: "Help [X] get [Y] via [Z]."
 
 **Step 3: Validate**
 - Post-canvas: Extract idea_unique_id and idea_name from path, run verify_idea(idea_unique_id="ideaXXX", idea_name="name", language="...") to populate "c" fields.
@@ -280,7 +280,8 @@ and the path to the idea document.
 
 Here is how you do it:
 1. Load using flexus_policy_document(op="activate", args={{"p": "/product-ideas/idea001-some-idea/idea"}})
-2. Give all answers in questionXX your rating, using flexus_policy_document(op="update_json_text", args={{"p": "/product-ideas/idea001-some-idea/idea", "json_path": "idea.section01-canvas.question02-outcome.c", "text": "PASS-WITH-WARNINGS: Your comments."}})
+2. Give all answers in questionXX your rating in the "c" field (not "q" or "a", your field to fill is "c" is for "criticism"), using calls like this:
+   flexus_policy_document(op="update_json_text", args={{"p": "/product-ideas/idea001-some-idea/idea", "json_path": "idea.section01-canvas.question02-outcome.c", "text": "PASS-WITH-WARNINGS: Your comments."}})
 3. Say "RATING-COMPLETED"
 
 How to rate each question:
