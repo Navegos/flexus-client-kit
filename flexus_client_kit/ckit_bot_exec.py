@@ -228,15 +228,12 @@ class RobotContext:
             tool_result = "Tool error, see logs for details"  # Not too much visible for end user
         prov_dict = {"system": fclient.service_name}
         if subchats_list is not None:
-            prov_dict["subchats"] = subchats_list
+            prov_dict["subchats_started"] = subchats_list
         prov = json.dumps(prov_dict)
-        if tool_result != "WAIT_SUBCHATS" and tool_result != "POSTED_NEED_CONFIRMATION" and tool_result != "ALREADY_POSTED_RESULT":
+        if tool_result != "POSTED_NEED_CONFIRMATION" and tool_result != "ALREADY_POSTED_RESULT":
             if not already_serialized:
                 tool_result = json.dumps(tool_result)
-            await ckit_cloudtool.cloudtool_post_result(fclient, toolcall.fcall_id, toolcall.fcall_untrusted_key, tool_result, prov)
-        print("QQQQQQQ", prov)
-        import time
-        time.sleep(10)
+            await ckit_cloudtool.cloudtool_post_result(fclient, toolcall.fcall_id, toolcall.fcall_untrusted_key, tool_result, prov, as_placeholder=bool(subchats_list))
 
 
 class BotInstance(NamedTuple):
