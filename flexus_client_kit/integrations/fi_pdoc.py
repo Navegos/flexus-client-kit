@@ -162,6 +162,7 @@ class IntegrationPdoc:
                     return f"Error: text parameter required\n\n{HELP}"
 
                 try:
+                    # XXX from flexus_backend.flexus_v1 import official_json_validator
                     json.loads(text)
                 except json.JSONDecodeError as e:
                     return f"Error: text must be valid JSON: {str(e)}"

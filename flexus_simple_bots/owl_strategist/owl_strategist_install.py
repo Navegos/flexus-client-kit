@@ -7,6 +7,13 @@ from flexus_client_kit import ckit_client
 from flexus_client_kit import ckit_bot_install
 
 from flexus_simple_bots.owl_strategist import owl_strategist_bot, owl_strategist_prompts
+from flexus_simple_bots.owl_strategist.skills import diagnostic as skill_diagnostic
+from flexus_simple_bots.owl_strategist.skills import metrics as skill_metrics
+from flexus_simple_bots.owl_strategist.skills import segment as skill_segment
+from flexus_simple_bots.owl_strategist.skills import messaging as skill_messaging
+from flexus_simple_bots.owl_strategist.skills import channels as skill_channels
+from flexus_simple_bots.owl_strategist.skills import tactics as skill_tactics
+from flexus_simple_bots.owl_strategist.skills import compliance as skill_compliance
 
 
 BOT_DESCRIPTION = """
@@ -33,25 +40,14 @@ Every step is discussed with you — no automation without your understanding an
 """
 
 
-# Lark kernel for agent subchats — detects AGENT_COMPLETE marker and returns result
-AGENT_LARK = '''
-msg = messages[-1]
-if msg["role"] == "assistant":
-    content = str(msg["content"])
-    if "AGENT_COMPLETE" in content:
-        print("Agent finished, returning result")
-        subchat_result = content
-    elif len(msg["tool_calls"]) == 0:
-        print("Agent stopped without completion marker")
-        post_cd_instruction = "You must complete your analysis. Save your result via flexus_policy_document and end with AGENT_COMPLETE."
-'''
-
-
 async def install(
     client: ckit_client.FlexusClient,
     ws_id: str,
+    bot_name: str,
+    bot_version: str,
+    tools: list,
 ):
-    bot_tools_json = json.dumps([t.openai_style_tool() for t in owl_strategist_bot.TOOLS])
+    bot_tools_json = json.dumps([t.openai_style_tool() for t in tools])
     agent_tools_json = json.dumps([t.openai_style_tool() for t in owl_strategist_bot.AGENT_TOOLS])
 
     # XXX pictures will be added later
@@ -67,8 +63,8 @@ async def install(
     await ckit_bot_install.marketplace_upsert_dev_bot(
         client,
         ws_id=ws_id,
-        marketable_name=owl_strategist_bot.BOT_NAME,
-        marketable_version=owl_strategist_bot.BOT_VERSION,
+        marketable_name=bot_name,
+        marketable_version=bot_version,
         marketable_accent_color="#8B4513",
         marketable_title1="Owl Strategist",
         marketable_title2="AI expert for marketing strategies and hypothesis validation",
@@ -98,56 +94,56 @@ async def install(
             )),
             # Agent A: Diagnostic — classify hypothesis, identify unknowns
             ("diagnostic", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=owl_strategist_prompts.DIAGNOSTIC_PROMPT,
-                fexp_python_kernel=AGENT_LARK,
+                fexp_system_prompt=skill_diagnostic.SYSTEM_PROMPT,
+                fexp_python_kernel=skill_diagnostic.LARK_KERNEL,
                 fexp_block_tools="*setup*",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=agent_tools_json,
             )),
             # Agent G: Metrics — KPI, MDE, stop/accelerate rules
             ("metrics", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=owl_strategist_prompts.METRICS_PROMPT,
-                fexp_python_kernel=AGENT_LARK,
+                fexp_system_prompt=skill_metrics.SYSTEM_PROMPT,
+                fexp_python_kernel=skill_metrics.LARK_KERNEL,
                 fexp_block_tools="*setup*",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=agent_tools_json,
             )),
             # Agent B: Segment — ICP, JTBD, customer journey
             ("segment", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=owl_strategist_prompts.SEGMENT_PROMPT,
-                fexp_python_kernel=AGENT_LARK,
+                fexp_system_prompt=skill_segment.SYSTEM_PROMPT,
+                fexp_python_kernel=skill_segment.LARK_KERNEL,
                 fexp_block_tools="*setup*",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=agent_tools_json,
             )),
             # Agent C: Messaging — value prop, angles, objections
             ("messaging", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=owl_strategist_prompts.MESSAGING_PROMPT,
-                fexp_python_kernel=AGENT_LARK,
+                fexp_system_prompt=skill_messaging.SYSTEM_PROMPT,
+                fexp_python_kernel=skill_messaging.LARK_KERNEL,
                 fexp_block_tools="*setup*",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=agent_tools_json,
             )),
             # Agent D: Channels — channel selection, test cells, budget
             ("channels", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=owl_strategist_prompts.CHANNELS_PROMPT,
-                fexp_python_kernel=AGENT_LARK,
+                fexp_system_prompt=skill_channels.SYSTEM_PROMPT,
+                fexp_python_kernel=skill_channels.LARK_KERNEL,
                 fexp_block_tools="*setup*",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=agent_tools_json,
             )),
             # Agent E: Tactics — campaigns, creatives, landing, tracking
             ("tactics", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=owl_strategist_prompts.TACTICS_PROMPT,
-                fexp_python_kernel=AGENT_LARK,
+                fexp_system_prompt=skill_tactics.SYSTEM_PROMPT,
+                fexp_python_kernel=skill_tactics.LARK_KERNEL,
                 fexp_block_tools="*setup*",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=agent_tools_json,
             )),
             # Agent F: Compliance — risks, ads policies, privacy
             ("compliance", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=owl_strategist_prompts.COMPLIANCE_PROMPT,
-                fexp_python_kernel=AGENT_LARK,
+                fexp_system_prompt=skill_compliance.SYSTEM_PROMPT,
+                fexp_python_kernel=skill_compliance.LARK_KERNEL,
                 fexp_block_tools="*setup*",
                 fexp_allow_tools="",
                 fexp_app_capture_tools=agent_tools_json,
