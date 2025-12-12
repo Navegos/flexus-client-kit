@@ -157,6 +157,7 @@ async def install(
 
 
 if __name__ == "__main__":
+    from flexus_simple_bots.owl_strategist import owl_strategist_bot
     args = ckit_bot_install.bot_install_argparse()
     client = ckit_client.FlexusClient("owl_strategist_install")
-    asyncio.run(install(client, ws_id=args.ws))
+    asyncio.run(install(client, ws_id=args.ws, bot_name=owl_strategist_bot.BOT_NAME, bot_version=owl_strategist_bot.BOT_VERSION, tools=owl_strategist_bot.TOOLS))
