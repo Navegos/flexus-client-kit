@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import logging
 import time
@@ -57,6 +58,23 @@ class FCloudtoolCall:
     confirmed_by_human: Optional[bool] = None
 
 
+def _fix_schema_for_strict_mode(schema: dict) -> dict:
+    """Recursively fix schema for OpenAI strict mode:
+    - additionalProperties: false on all objects
+    - required: [all property keys] on all objects"""
+    if not isinstance(schema, dict):
+        return schema
+    if schema.get("type") == "object":
+        schema["additionalProperties"] = False
+        if "properties" in schema:
+            schema["required"] = list(schema["properties"].keys())
+            for prop in schema["properties"].values():
+                _fix_schema_for_strict_mode(prop)
+    if "items" in schema:
+        _fix_schema_for_strict_mode(schema["items"])
+    return schema
+
+
 @dataclass
 class CloudTool:
     name: str
@@ -64,12 +82,15 @@ class CloudTool:
     parameters: dict
 
     def openai_style_tool(self):
+        params = copy.deepcopy(self.parameters)
+        _fix_schema_for_strict_mode(params)
         return {
             "type": "function",
             "function": {
                 "name": self.name,
                 "description": self.description,
-                "parameters": self.parameters
+                "parameters": params,
+                "strict": True,
             }
         }
 
