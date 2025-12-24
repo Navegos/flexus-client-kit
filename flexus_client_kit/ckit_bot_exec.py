@@ -432,6 +432,8 @@ async def subscribe_and_produce_callbacks(
                     if persona_id in bc.bots_running:
                         bc.bots_running[persona_id].instance_rcx._parked_threads[thread.ft_id] = thread
                         bc.bots_running[persona_id].instance_rcx._parked_anything_new.set()
+                    else:
+                        logger.info("Thread update %s is about persona=%s which is not running here." % (thread.ft_id, persona_id))
                     reassign_threads = True
 
                 elif upd.news_action in ["DELETE", "STOP_TRACKING"]:
@@ -521,7 +523,7 @@ async def subscribe_and_produce_callbacks(
                 logger.warning("Subscription has sent me something I can't understand:\n%s\n" % upd)
 
             if reassign_threads:
-                assert len(bc.thread_tracker) <= MAX_THREADS, "backend should send STOP_TRACKING wtf"   # actually sometimes triggers after reconnect :/
+                assert len(bc.thread_tracker) <= MAX_THREADS, "backend should send STOP_TRACKING wtf"
                 # There we go, now it's O(1) because it's limited
                 for bot in bc.bots_running.values():
                     to_test = list(bot.instance_rcx.latest_threads.keys())
