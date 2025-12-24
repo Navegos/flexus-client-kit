@@ -58,13 +58,13 @@ async def _ensure_repo_cached(repo_url: str, branch: Optional[str], github_token
     needs_pull = not needs_clone and time.time() - _repo_last_access.get(cache_key, 0) > REPO_REFRESH_TIMEOUT
 
     if needs_clone:
-        logger.info(f"Cloning {cache_key}...")
+        logger.info(f"{cache_path} Cloning {cache_key}...")
         cmd = ["git", "clone", "--depth", "1"] + (["--branch", branch] if branch else []) + [clone_url, cache_path]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"Failed to clone {cache_key}: {result.stderr}")
     elif needs_pull:
-        logger.info(f"Pulling latest changes for {cache_key}...")
+        logger.info(f"{cache_path} Pulling latest changes for {cache_key}...")
         result = subprocess.run(["git", "pull"], capture_output=True, text=True, cwd=cache_path)
         if result.returncode != 0:
             logger.info(f"Failed to pull {cache_key}: {result.stderr}", exc_info=True)
