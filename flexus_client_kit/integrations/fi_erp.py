@@ -13,6 +13,7 @@ logger = logging.getLogger("fi_erp")
 
 
 ERP_TABLE_META_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="erp_table_meta",
     description=(
         "Get metadata about ERP tables including columns and relations. "
@@ -30,6 +31,7 @@ ERP_TABLE_META_TOOL = ckit_cloudtool.CloudTool(
 
 
 ERP_TABLE_DATA_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="erp_table_data",
     description=(
         "Query ERP table data with filtering. "
@@ -63,6 +65,7 @@ ERP_TABLE_DATA_TOOL = ckit_cloudtool.CloudTool(
 
 
 ERP_TABLE_CRUD_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="erp_table_crud",
     description=(
         "Create, update (patch), or delete records in ERP tables. "

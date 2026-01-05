@@ -12,6 +12,7 @@ from flexus_client_kit import ckit_external_auth
 logger = logging.getLogger("survey_research")
 
 SURVEY_RESEARCH_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="survey",
     description="Survey research: draft surveys, draft audience targeting, run campaigns. Start with op=\"help\".",
     parameters={

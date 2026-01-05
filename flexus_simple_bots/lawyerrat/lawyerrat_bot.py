@@ -26,6 +26,7 @@ BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 
 
 LEGAL_RESEARCH_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="legal_research",
     description="Conduct thorough legal research on a specific topic, statute, or case law. Returns relevant information and precedents.",
     parameters={
@@ -40,6 +41,7 @@ LEGAL_RESEARCH_TOOL = ckit_cloudtool.CloudTool(
 )
 
 DRAFT_DOCUMENT_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="draft_document",
     description="Draft a legal document or contract based on specified requirements and type.",
     parameters={
@@ -55,6 +57,7 @@ DRAFT_DOCUMENT_TOOL = ckit_cloudtool.CloudTool(
 )
 
 ANALYZE_CONTRACT_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="analyze_contract",
     description="Analyze a contract or agreement for potential issues, risks, and notable clauses.",
     parameters={

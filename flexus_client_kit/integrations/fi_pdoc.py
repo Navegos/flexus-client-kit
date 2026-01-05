@@ -16,16 +16,15 @@ logger = logging.getLogger("pdocs")
 
 
 POLICY_DOCUMENT_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="flexus_policy_document",
     description="List, read, update Policy Documents. Start with op=\"help\".",
     parameters={
         "type": "object",
         "properties": {
-            "op": {"type": ["string", "null"]},
-            "args": {"type": ["object", "null"], "additionalProperties": False},
+            "op": {"type": "string"},
+            "args": {"type": "object"},
         },
-        "required": ["op", "args"],
-        "additionalProperties": False,
     },
 )
 

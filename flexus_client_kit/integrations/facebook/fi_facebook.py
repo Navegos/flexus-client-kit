@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("facebook")
 
 FACEBOOK_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="facebook",
     description="Interact with Facebook/Instagram Marketing API. Call with op=\"help\" for usage.",
     parameters={

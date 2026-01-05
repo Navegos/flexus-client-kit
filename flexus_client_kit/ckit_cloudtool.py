@@ -36,6 +36,11 @@ class WaitForSubchats(Exception):
         super().__init__(f"Waiting for subchats: {subchats}")
 
 
+class AlreadyFakedResult(Exception):
+    def __init__(self):
+        super().__init__("Result already faked in scenario")
+
+
 @dataclass
 class FCloudtoolCall:
     caller_fuser_id: str  # copy of thread owner fuser_id
@@ -59,6 +64,7 @@ class FCloudtoolCall:
 
 @dataclass
 class CloudTool:
+    strict: bool
     name: str
     description: str
     parameters: dict
@@ -87,7 +93,7 @@ class CloudTool:
                 "description": self.description,
                 "parameters": params,
             },
-            "strict": True,
+            "strict": self.strict,
         }
 
 
@@ -142,14 +148,14 @@ async def call_python_function_and_save_result(
     try:
         args = json.loads(call.fcall_arguments)
         content, prov = await the_python_function(fclient, call, args)
-        # NOTE: here we have 3 allowed variants for output
+        # NOTE: here we have 2 allowed variants for output
         # 1. (str, str) - immediate answer from handler
         # 2. (None, None) - delayed cloudtool_post_result
-        # 3. ("ALREADY_FAKED_RESULT", "") - scenario already posted fake result
         assert (isinstance(content, str) and isinstance(prov, str)) or (content is None and prov is None)
         logger.info("/%s %s:%03d:%03d %+d result=%s", call.fcall_id, call.fcall_ft_id, call.fcall_ftm_alt, call.fcall_called_ftm_num, call.fcall_call_n, content[:30] if content is not None else "delayed")
-        if content == "ALREADY_FAKED_RESULT":
-            return
+    except AlreadyFakedResult:
+        logger.info("/%s fake %s:%03d:%03d %+d", call.fcall_id, call.fcall_ft_id, call.fcall_ftm_alt, call.fcall_called_ftm_num, call.fcall_call_n)
+        return
     except NeedsConfirmation as e:
         logger.info("%s needs human confirmation: %s", call.fcall_id, e.confirm_explanation)
         try:

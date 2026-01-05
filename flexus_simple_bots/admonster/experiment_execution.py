@@ -19,6 +19,7 @@ logger = logging.getLogger("experiment_execution")
 
 
 LAUNCH_EXPERIMENT_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="launch_experiment",
     description="Launch Meta campaigns from Owl Strategist tactics document. Creates campaigns in PAUSED status for review.",
     parameters={

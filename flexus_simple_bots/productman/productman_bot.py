@@ -27,6 +27,7 @@ BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 
 
 IDEA_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="template_idea",
     description="Create idea document. Provide idea_name (kebab-case), server generates unique ID.",
     parameters={
@@ -48,6 +49,7 @@ IDEA_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
 )
 
 HYPOTHESIS_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="template_hypothesis",
     description="Create hypothesis document. Provide idea_unique_id and hypothesis_name, server generates unique ID.",
     parameters={
@@ -74,6 +76,7 @@ HYPOTHESIS_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
 )
 
 VERIFY_IDEA_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="verify_idea",
     description="Launch subchat to rate idea as PASS/PASS-WITH-WARNINGS/FAIL per question.",
     parameters={

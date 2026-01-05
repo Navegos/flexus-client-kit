@@ -46,6 +46,7 @@ STEP_DESCRIPTIONS = {
 
 
 SAVE_INPUT_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="save_input",
     description="Save collected input data to start marketing experiment. Call after collecting product/hypothesis/budget/timeline from user.",
     parameters={
@@ -64,6 +65,7 @@ SAVE_INPUT_TOOL = ckit_cloudtool.CloudTool(
 )
 
 RUN_AGENT_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="run_agent",
     description="Run specific agent. Pipeline is strictly sequential: input → diagnostic → metrics → segment → messaging → channels → tactics → compliance. Each step requires previous step completed.",
     parameters={
@@ -82,6 +84,7 @@ RUN_AGENT_TOOL = ckit_cloudtool.CloudTool(
 )
 
 RERUN_AGENT_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="rerun_agent",
     description="Rerun agent with corrections after user feedback. Does not change pipeline position.",
     parameters={
@@ -99,6 +102,7 @@ RERUN_AGENT_TOOL = ckit_cloudtool.CloudTool(
 )
 
 GET_PIPELINE_STATUS_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="get_pipeline_status",
     description="Get current pipeline status for marketing experiment — which steps are done, which is next.",
     parameters={

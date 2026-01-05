@@ -31,6 +31,7 @@ BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 
 
 STYLEGUIDE_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="template_styleguide",
     description="Create style guide file in pdoc. Saves to /style-guide by default.",
     parameters={
@@ -50,6 +51,7 @@ STYLEGUIDE_TEMPLATE_TOOL = ckit_cloudtool.CloudTool(
 )
 
 GENERATE_PICTURE_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="picturegen",
     description="Generate a picture from a text prompt using AI. Saves .png result to MongoDB. Acceptable sizes: '1024x1024' (square), '1024x1536' (portrait), '1536x1024' (landscape)",
     parameters={
@@ -74,6 +76,7 @@ GENERATE_PICTURE_TOOL = ckit_cloudtool.CloudTool(
 )
 
 CROP_IMAGE_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="crop_image",
     description="Crop an image into one or more regions. Creates full-size crops plus 0.5x scaled versions. Outputs named with -crop000, -crop001, etc.",
     parameters={

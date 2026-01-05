@@ -28,6 +28,7 @@ BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 
 
 RIBBIT_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="ribbit",
     description="Make a frog sound to greet users or express happiness.",
     parameters={
@@ -42,6 +43,7 @@ RIBBIT_TOOL = ckit_cloudtool.CloudTool(
 )
 
 CATCH_INSECTS_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="catch_insects",
     description="Catch insects in parallel. Limited by your tongue_capacity from setup.",
     parameters={
@@ -61,6 +63,7 @@ CATCH_INSECTS_TOOL = ckit_cloudtool.CloudTool(
 # > - You can denote optional fields by adding null as a type option (see example below).
 
 MAKE_POND_REPORT_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="make_pond_report",
     description="Create a new pond report document at the specified path.",
     parameters={

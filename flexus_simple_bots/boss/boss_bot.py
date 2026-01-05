@@ -28,6 +28,7 @@ ACCENT_COLOR = "#8B4513"
 
 
 BOSS_A2A_RESOLUTION_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="boss_a2a_resolution",
     description="Resolve an agent-to-agent handover task: approve, reject, or request rework",
     parameters={
@@ -42,6 +43,7 @@ BOSS_A2A_RESOLUTION_TOOL = ckit_cloudtool.CloudTool(
 )
 
 BOSS_SETUP_COLLEAGUES_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="boss_setup_colleagues",
     description="Manage colleague bot configuration. Call with op='help' to show usage",
     parameters={
@@ -55,6 +57,7 @@ BOSS_SETUP_COLLEAGUES_TOOL = ckit_cloudtool.CloudTool(
 )
 
 THREAD_MESSAGES_PRINTED_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="thread_messages_printed",
     description="Print thread messages. Provide either a2a_task_id to view the thread that handed over this task, or ft_id to view thread directly",
     parameters={
@@ -67,6 +70,7 @@ THREAD_MESSAGES_PRINTED_TOOL = ckit_cloudtool.CloudTool(
 )
 
 BOT_BUG_REPORT_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="bot_bug_report",
     description="Report a bug related to a bot's code, tools, or prompts. Call with op=help for usage.",
     parameters={

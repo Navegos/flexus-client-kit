@@ -13,6 +13,7 @@ logger = logging.getLogger("mongo_store")
 
 
 MONGO_STORE_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="mongo_store",
     description="Store and retrieve files in MongoDB, call with op=help for usage",
     parameters={

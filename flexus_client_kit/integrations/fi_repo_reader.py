@@ -17,6 +17,7 @@ _repo_last_access: Dict[str, float] = {}
 
 
 REPO_READER_TOOL = ckit_cloudtool.CloudTool(
+    strict=False,
     name="repo_reader",
     description="Read-only files from github repositories, call with op=\"help\" for usage.",
     parameters={

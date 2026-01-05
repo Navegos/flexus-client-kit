@@ -41,6 +41,7 @@ STEP_DESCRIPTIONS = {
 # =============================================================================
 
 SAVE_INPUT_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="save_input",
     description="Save collected input data to start marketing experiment. Call after collecting product/hypothesis/budget/timeline from user.",
     parameters={
@@ -108,6 +109,7 @@ async def handle_save_input(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[
 # =============================================================================
 
 CREATE_DIAGNOSTIC_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="create_diagnostic",
     description="Analyze hypothesis and classify testing approach. Call after input is saved. Reads /input document automatically.",
     parameters={
@@ -210,6 +212,7 @@ async def handle_diagnostic(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[
 # =============================================================================
 
 CREATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="create_metrics",
     description="Define KPIs, MDE, stop/accelerate rules. Call after diagnostic. Reads /input and /diagnostic automatically.",
     parameters={
@@ -366,6 +369,7 @@ async def handle_metrics(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str
 # =============================================================================
 
 CREATE_SEGMENT_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="create_segment",
     description="Define ICP, JTBD, customer journey. Call after diagnostic. Reads /input and /diagnostic automatically.",
     parameters={
@@ -509,6 +513,7 @@ async def handle_segment(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str
 # =============================================================================
 
 CREATE_MESSAGING_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="create_messaging",
     description="Create value prop, angles, objections. Call after segment. Reads /input, /diagnostic, /segment automatically.",
     parameters={
@@ -650,6 +655,7 @@ async def handle_messaging(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[s
 # =============================================================================
 
 CREATE_CHANNELS_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="create_channels",
     description="Select channels, design test cells, allocate budget. Call after messaging. Reads /input, /diagnostic, /metrics, /segment, /messaging automatically.",
     parameters={
@@ -800,6 +806,7 @@ async def handle_channels(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[st
 # =============================================================================
 
 CREATE_TACTICS_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="create_tactics",
     description="Generate campaign specs, creative briefs, landing structure, tracking. Call after channels. Reads all previous docs automatically.",
     parameters={
@@ -966,6 +973,7 @@ async def handle_tactics(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str
 # =============================================================================
 
 CREATE_COMPLIANCE_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="create_compliance",
     description="Check risks, ad policies, privacy compliance. Call after tactics. Reads /input and /tactics automatically.",
     parameters={
@@ -1131,6 +1139,7 @@ async def handle_compliance(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[
 # =============================================================================
 
 GET_PIPELINE_STATUS_TOOL = ckit_cloudtool.CloudTool(
+    strict=True,
     name="get_pipeline_status",
     description="Get current pipeline status for marketing experiment — which steps are done, which is next.",
     parameters={
