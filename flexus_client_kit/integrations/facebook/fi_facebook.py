@@ -93,6 +93,7 @@ facebook(op="create_ad", args={
     Create ad from creative.
 """
 
+
 _OPERATION_HANDLERS = {
     "list_ad_accounts": lambda client, args: list_ad_accounts(client),
     "get_ad_account_info": lambda client, args: get_ad_account_info(client, args.get("ad_account_id", "")),

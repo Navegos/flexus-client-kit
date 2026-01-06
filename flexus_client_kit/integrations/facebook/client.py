@@ -141,6 +141,7 @@ class FacebookAdsClient:
             raise last_exception
         raise FacebookAPIError(500, "Unexpected retry loop exit")
 
+
     async def _fetch_token(self) -> str:
         from flexus_client_kit import ckit_client
         http = await self.fclient.use_http()
@@ -177,6 +178,7 @@ class FacebookAdsClient:
         logger.info("Facebook token retrieved for %s", self.rcx.persona.persona_id)
         return access_token
 
+
     async def _prompt_oauth_connection(self) -> str:
         # Generate direct OAuth URL via backend API
         from flexus_client_kit import ckit_external_auth
@@ -188,7 +190,7 @@ class FacebookAdsClient:
                 fuser_id=self.rcx.persona.owner_fuser_id,
                 scopes=["ads_management", "ads_read", "business_management", "pages_manage_ads"],
             )
-        return f"""Facebook authorization required.
+            return f"""Facebook authorization required.
 
 Click this link to connect your Facebook account:
 {auth_url}
