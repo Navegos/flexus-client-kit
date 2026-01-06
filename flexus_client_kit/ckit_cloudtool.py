@@ -53,6 +53,7 @@ class ToolResult:
     """
     content: str
     multimodal: Optional[List[dict]] = None
+    dollars: float = 0.0
 
     def __post_init__(self):
         if self.multimodal is not None and self.content:

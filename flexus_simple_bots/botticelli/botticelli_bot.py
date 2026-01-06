@@ -245,11 +245,16 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
                 # background="auto",         # or "transparent" | "opaque"
                 # moderation="auto",       # or "low"
             )
-            # prices from here https://platform.openai.com/docs/models/gpt-image-1.5
+            # prices from here, per 1000 images https://platform.openai.com/docs/models/gpt-image-1.5
             # Quality	1024×1024 1024×1536
             # low	    $9        $13
             # medium	$34       $50
-            # per 1000 images
+            dollars_by_size = {
+                "1024x1024": 0.034,
+                "1024x1536": 0.050,
+                "1536x1024": 0.050,
+            }
+            dollars = dollars_by_size[size]
 
             image_b64 = rsp.data[0].b64_json
             png_bytes = base64.b64decode(image_b64)
@@ -278,7 +283,8 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
                 multimodal=[
                     {"m_type": "text", "m_content": f"Generated image saved to mongodb:\n{webp_p1}\nor 0.5x size:\n{webp_p2}\n\nAccessible via:\n{image_url1}\n{image_url2}\n"},
                     {"m_type": "image/webp", "m_content": image_url2}
-                ]
+                ],
+                dollars=dollars
             )
 
         except Exception as e:

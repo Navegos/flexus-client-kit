@@ -207,6 +207,7 @@ class RobotContext:
     async def _local_tool_call(self, fclient: ckit_client.FlexusClient, toolcall: ckit_cloudtool.FCloudtoolCall) -> None:
         logger.info("%s local_tool_call %s %s(%s) from thread %s" % (self.persona.persona_id, toolcall.fcall_id, toolcall.fcall_name, toolcall.fcall_arguments, toolcall.fcall_ft_id))
         subchats_list = None
+        dollars = 0.0
         try:
             args = json.loads(toolcall.fcall_arguments)
             if not isinstance(args, dict):
@@ -215,6 +216,7 @@ class RobotContext:
             tool_result = await handler(toolcall, args)
             if isinstance(tool_result, ckit_cloudtool.ToolResult):
                 serialized_result = tool_result.to_serialized()
+                dollars = tool_result.dollars
             elif isinstance(tool_result, str):
                 if tool_result == "":
                     logger.warning("Tool call %s returned an empty string. Bad practice, model will not know what's happening!" % toolcall.fcall_name)
@@ -245,7 +247,7 @@ class RobotContext:
         if subchats_list is not None:
             prov_dict["subchats_started"] = subchats_list
         prov = json.dumps(prov_dict)
-        await ckit_cloudtool.cloudtool_post_result(fclient, toolcall.fcall_id, toolcall.fcall_untrusted_key, serialized_result, prov, as_placeholder=bool(subchats_list))
+        await ckit_cloudtool.cloudtool_post_result(fclient, toolcall.fcall_id, toolcall.fcall_untrusted_key, serialized_result, prov, dollars=dollars, as_placeholder=bool(subchats_list))
 
 
 class BotInstance(NamedTuple):
