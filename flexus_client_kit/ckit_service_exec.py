@@ -2,6 +2,7 @@ import logging
 import asyncio
 import time
 import sys
+import random
 from typing import Callable
 
 import gql.transport.exceptions
@@ -25,8 +26,8 @@ async def run_typical_single_subscription_with_restart_on_network_errors(fclient
                 ckit_shutdown.give_ws_client(fclient.service_name, ws_client)
                 await subscribe_and_do_something(fclient, ws_client, *func_args, **func_kwargs)
                 if not ckit_shutdown.shutdown_event.is_set():
-                    logger.error("🛑 The only way we get there is shutdown, what happened?")
-                    continue
+                    logger.info("backend has disconnected gracefully, that's normal for backend upgrades or restarts, will sleep 10-20 seconds and reconnect")
+                    await ckit_shutdown.wait(10 + random.randint(0, 10))
             finally:
                 ckit_shutdown.take_away_ws_client(fclient.service_name)
 
