@@ -195,31 +195,31 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
         return await pdoc_integration.called_by_model(toolcall, model_produced_args)
 
     @rcx.on_tool_call(GENERATE_PICTURE_TOOL.name)
-    async def toolcall_generate_picture(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> Union[str, List[Dict[str, str]]]:
+    async def toolcall_generate_picture(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> ckit_cloudtool.ToolResult:
         prompt = model_produced_args.get("prompt", "")
         size = model_produced_args.get("size", "1024x1024")
         filename = model_produced_args.get("filename", "")
 
         if not prompt:
-            return "Error: prompt required"
+            return ckit_cloudtool.ToolResult("Error: prompt required")
         if not filename:
-            return "Error: filename required"
+            return ckit_cloudtool.ToolResult("Error: filename required")
         if size not in ["1024x1024", "1024x1536", "1536x1024"]:
-            return f"Error: size must be one of: 1024x1024 (square), 1024x1536 (portrait), 1536x1024 (landscape)"
+            return ckit_cloudtool.ToolResult(f"Error: size must be one of: 1024x1024 (square), 1024x1536 (portrait), 1536x1024 (landscape)")
 
         try:
             filename.encode('ascii')
         except UnicodeEncodeError:
-            return "Error: filename must be ASCII only"
+            return ckit_cloudtool.ToolResult("Error: filename must be ASCII only")
 
         if ' ' in filename:
-            return "Error: filename cannot contain spaces"
+            return ckit_cloudtool.ToolResult("Error: filename cannot contain spaces")
 
         if any(ord(c) < 32 or ord(c) == 127 for c in filename):
-            return "Error: filename cannot contain control characters"
+            return ckit_cloudtool.ToolResult("Error: filename cannot contain control characters")
 
         if ".." in filename or "\\" in filename:
-            return "Error: filename contains invalid path sequences (no .. or backslashes)"
+            return ckit_cloudtool.ToolResult("Error: filename contains invalid path sequences (no .. or backslashes)")
 
         if not filename.endswith(".png"):
             filename = filename + ".png"
@@ -227,13 +227,29 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
         try:
             logger.info(f"Generating {size} image: {prompt[:50]}...")
+            # rsp = await openai_client.images.generate(
+            #     model="dall-e-3",
+            #     prompt=prompt,
+            #     n=1,
+            #     size=size,
+            #     response_format="b64_json"
+            # )
             rsp = await openai_client.images.generate(
-                model="dall-e-3",
+                model="gpt-image-1.5",
                 prompt=prompt,
                 n=1,
                 size=size,
-                response_format="b64_json"
+                quality="medium",
+                # quality="auto",           # or "low" | "medium" | "high"
+                # output_format="png",       # png | jpeg | webp
+                # background="auto",         # or "transparent" | "opaque"
+                # moderation="auto",       # or "low"
             )
+            # prices from here https://platform.openai.com/docs/models/gpt-image-1.5
+            # Quality	1024×1024 1024×1536
+            # low	    $9        $13
+            # medium	$34       $50
+            # per 1000 images
 
             image_b64 = rsp.data[0].b64_json
             png_bytes = base64.b64decode(image_b64)
@@ -257,29 +273,31 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
             logger.info(f"Saved to MongoDB: {webp_p2}")
             image_url1 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{webp_p1}"
             image_url2 = f"{fclient.base_url_http}/v1/docs/{rcx.persona.persona_id}/{webp_p2}"
-            result = [
-                {"m_type": "text", "m_content": f"Generated image saved to mongodb:\n{webp_p1}\nor 0.5x size:\n{webp_p2}\n\nAccessible via:\n{image_url1}\n{image_url2}\n"},
-                {"m_type": "image/webp", "m_content": image_url2}
-            ]
-            return result
+            return ckit_cloudtool.ToolResult(
+                content="",
+                multimodal=[
+                    {"m_type": "text", "m_content": f"Generated image saved to mongodb:\n{webp_p1}\nor 0.5x size:\n{webp_p2}\n\nAccessible via:\n{image_url1}\n{image_url2}\n"},
+                    {"m_type": "image/webp", "m_content": image_url2}
+                ]
+            )
 
         except Exception as e:
             logger.error(f"Error generating image: {e}", exc_info=True)
-            return f"Error generating image: {str(e)}"
+            return ckit_cloudtool.ToolResult(f"Error generating image: {str(e)}")
 
     @rcx.on_tool_call(CROP_IMAGE_TOOL.name)
-    async def toolcall_crop_image(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> Union[str, List[Dict[str, str]]]:
+    async def toolcall_crop_image(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> ckit_cloudtool.ToolResult:
         source_path = model_produced_args.get("source_path", "")
         crops = model_produced_args.get("crops", [])
 
         if not source_path:
-            return "Error: source_path required"
+            return ckit_cloudtool.ToolResult("Error: source_path required")
         if not crops:
-            return "Error: crops list required"
+            return ckit_cloudtool.ToolResult("Error: crops list required")
 
         source_doc = await ckit_mongo.mongo_retrieve_file(personal_mongo, source_path)
         if not source_doc:
-            return f"Error: source image not found: {source_path}"
+            return ckit_cloudtool.ToolResult(f"Error: source image not found: {source_path}")
         source_bytes = source_doc["data"]
 
         with Image.open(io.BytesIO(source_bytes)) as src_img:
@@ -287,14 +305,14 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
 
             for i, crop in enumerate(crops):
                 if not isinstance(crop, list) or len(crop) != 4:
-                    return f"Error: crop {i} must be [x, y, width, height]"
+                    return ckit_cloudtool.ToolResult(f"Error: crop {i} must be [x, y, width, height]")
                 x, y, w, h = crop
                 if not all(isinstance(v, int) for v in [x, y, w, h]):
-                    return f"Error: crop {i} coordinates must be integers"
+                    return ckit_cloudtool.ToolResult(f"Error: crop {i} coordinates must be integers")
                 if x < 0 or y < 0 or w <= 0 or h <= 0:
-                    return f"Error: crop {i} has invalid coordinates: x={x}, y={y}, w={w}, h={h}"
+                    return ckit_cloudtool.ToolResult(f"Error: crop {i} has invalid coordinates: x={x}, y={y}, w={w}, h={h}")
                 if x + w > src_w or y + h > src_h:
-                    return f"Error: crop {i} exceeds image bounds (image is {src_w}x{src_h}, crop goes to {x+w}x{y+h})"
+                    return ckit_cloudtool.ToolResult(f"Error: crop {i} exceeds image bounds (image is {src_w}x{src_h}, crop goes to {x+w}x{y+h})")
 
             base_path = re.sub(r'-\d+x\d+\.webp$', '.webp', source_path)
             base_path = re.sub(r'-crop\d{3}\.webp$', '.webp', base_path)
@@ -319,7 +337,7 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
                         break
 
                 if crop_num is None:
-                    return "Error: no available crop numbers (crop000-crop999 all used)"
+                    return ckit_cloudtool.ToolResult("Error: no available crop numbers (crop000-crop999 all used)")
 
                 cropped = src_img.crop((x, y, x + w, y + h))
 
@@ -362,10 +380,10 @@ async def botticelli_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_
                 result_text += f"    {r['url1']}\n"
                 result_text += f"    {r['url2']}\n"
 
-            response = [{"m_type": "text", "m_content": result_text}]
+            multimodal_content = [{"m_type": "text", "m_content": result_text}]
             for r in results:
-                response.append({"m_type": "image/webp", "m_content": r["url2"]})
-            return response
+                multimodal_content.append({"m_type": "image/webp", "m_content": r["url2"]})
+            return ckit_cloudtool.ToolResult(content="", multimodal=multimodal_content)
 
     @rcx.on_tool_call(fi_mongo_store.MONGO_STORE_TOOL.name)
     async def toolcall_mongo_store(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:

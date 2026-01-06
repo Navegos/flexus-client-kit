@@ -87,9 +87,9 @@ or the user can fill out the form in the UI, that's fine too.
 
 ## Generating Images
 
-picturegen() makes pictures inside mongodb temp storage, and gives you the picture to see immediately.
+picturegen() creates pictures inside mongodb temp storage, and gives you the picture to see immediately.
 
-For filename choose something like "pictures/neon-elephant-at-night--buy-our-elephants.png", that is
+For filename choose something like "pictures/neon-elephant-at-night--buy-our-elephants.png"
 Use kebab-case, name consists of picture idea, double minus, text messaging within the picture.
 
 When picturegen() returns you a image, the frontend UI already shows it to the user, don't print

@@ -206,7 +206,6 @@ class RobotContext:
 
     async def _local_tool_call(self, fclient: ckit_client.FlexusClient, toolcall: ckit_cloudtool.FCloudtoolCall) -> None:
         logger.info("%s local_tool_call %s %s(%s) from thread %s" % (self.persona.persona_id, toolcall.fcall_id, toolcall.fcall_name, toolcall.fcall_arguments, toolcall.fcall_ft_id))
-        already_serialized = False
         subchats_list = None
         try:
             args = json.loads(toolcall.fcall_arguments)
@@ -214,44 +213,39 @@ class RobotContext:
                 raise json.JSONDecodeError("Toplevel is not a dict")
             handler = self._handler_per_tool[toolcall.fcall_name]
             tool_result = await handler(toolcall, args)
-            if isinstance(tool_result, list):  # Multimodal [{m_type: .., m_content: ...}, ...]
-                for item in tool_result:
-                    if not isinstance(item, dict):
-                        raise ValueError("Tool call handler returned list with non-dict item: %r" % (item,))
-                    if "m_type" not in item or "m_content" not in item:
-                        raise ValueError("Tool call handler list items must have m_type and m_content: %r" % (item,))
-                    if not isinstance(item["m_type"], str) or not isinstance(item["m_content"], str):
-                        raise ValueError("m_type and m_content must be strings: %r" % (item,))
-                tool_result = json.dumps(tool_result)
-                already_serialized = True
-            elif not isinstance(tool_result, str):
-                raise ValueError("Tool call handler must return a string or list, got instead: %r" % (tool_result,))
-            if tool_result == "":
-                logger.warning("Tool call %s returned an empty string. Bad practice, model will not know what's happening!" % toolcall.fcall_name)
+            if isinstance(tool_result, ckit_cloudtool.ToolResult):
+                serialized_result = tool_result.to_serialized()
+            elif isinstance(tool_result, str):
+                if tool_result == "":
+                    logger.warning("Tool call %s returned an empty string. Bad practice, model will not know what's happening!" % toolcall.fcall_name)
+                serialized_result = json.dumps(tool_result)
+            else:
+                raise ValueError("Tool call handler must return ToolResult or str, got instead: %r" % (tool_result,))
         except json.JSONDecodeError as e:
             # nothing in logs -- normal for a model to produce garbage on occasion
-            tool_result = "Arguments expected to be a valid json, problem: %s" % e
+            serialized_result = json.dumps("Arguments expected to be a valid json, problem: %s" % e)
         except ckit_cloudtool.WaitForSubchats as e:
-            tool_result = "WAIT_SUBCHATS"
+            serialized_result = json.dumps("WAIT_SUBCHATS")
             subchats_list = e.subchats
+        except ckit_cloudtool.AlreadyPostedResult:
+            logger.info("call %s result already posted" % toolcall.fcall_id)
+            return
         except ckit_cloudtool.NeedsConfirmation as e:
             logger.info("%s needs human confirmation: %s" % (toolcall.fcall_id, e.confirm_explanation))
             await ckit_cloudtool.cloudtool_confirmation_request(fclient, toolcall.fcall_id, e.confirm_setup_key, e.confirm_command, e.confirm_explanation)
-            tool_result = "POSTED_NEED_CONFIRMATION"
+            return
         except gql.transport.exceptions.TransportQueryError as e:
             logger.error("%s The construction of system prompt and tools generally should not produce backend errors, but here's one: %s", toolcall.fcall_id, e, exc_info=e)
-            tool_result = f"Error: {e}"  # Pass through GraphQL error messages to the model
+            serialized_result = json.dumps(f"Error: {e}")  # Pass through GraphQL error messages to the model
         except Exception as e:
             logger.error("%s Tool call failed: %s" % (toolcall.fcall_id, e), exc_info=e)  # full error and stack for the author of the bot
-            tool_result = "Tool error, see logs for details"  # Not too much visible for end user
+            serialized_result = json.dumps("Tool error, see logs for details")  # Not too much visible for end user
+
         prov_dict = {"system": fclient.service_name}
         if subchats_list is not None:
             prov_dict["subchats_started"] = subchats_list
         prov = json.dumps(prov_dict)
-        if tool_result != "POSTED_NEED_CONFIRMATION" and tool_result != "ALREADY_POSTED_RESULT":
-            if not already_serialized:
-                tool_result = json.dumps(tool_result)
-            await ckit_cloudtool.cloudtool_post_result(fclient, toolcall.fcall_id, toolcall.fcall_untrusted_key, tool_result, prov, as_placeholder=bool(subchats_list))
+        await ckit_cloudtool.cloudtool_post_result(fclient, toolcall.fcall_id, toolcall.fcall_untrusted_key, serialized_result, prov, as_placeholder=bool(subchats_list))
 
 
 class BotInstance(NamedTuple):

@@ -36,9 +36,40 @@ class WaitForSubchats(Exception):
         super().__init__(f"Waiting for subchats: {subchats}")
 
 
+class AlreadyPostedResult(Exception):
+    def __init__(self):
+        super().__init__("Result already posted")
+
+
 class AlreadyFakedResult(Exception):
     def __init__(self):
         super().__init__("Result already faked in scenario")
+
+
+@dataclass
+class ToolResult:
+    """
+    Local tools (in bots or cloudtool services) should either return str or ToolResult
+    """
+    content: str
+    multimodal: Optional[List[dict]] = None
+
+    def __post_init__(self):
+        if self.multimodal is not None and self.content:
+            raise ValueError("ToolResult: use either content (str) or multimodal (list), not both")
+        if self.multimodal:
+            for item in self.multimodal:
+                if not isinstance(item, dict):
+                    raise ValueError("ToolResult multimodal list items must be dicts: %r" % (item,))
+                if "m_type" not in item or "m_content" not in item:
+                    raise ValueError("ToolResult multimodal items must have m_type and m_content: %r" % (item,))
+                if not isinstance(item["m_type"], str) or not isinstance(item["m_content"], str):
+                    raise ValueError("ToolResult m_type and m_content must be strings: %r" % (item,))
+
+    def to_serialized(self) -> str:
+        if self.multimodal is not None:
+            return json.dumps(self.multimodal)
+        return json.dumps(self.content)
 
 
 @dataclass
