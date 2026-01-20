@@ -21,7 +21,15 @@ BOT_NAME = "owl"
 BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
-PIPELINE = ["calibration", "diagnostic", "metrics", "segment", "messaging", "channels", "tactics"]
+PIPELINE = [
+    "section01-calibration",
+    "section02-diagnostic",
+    "section03-metrics",
+    "section04-segment",
+    "section05-messaging",
+    "section06-channels",
+    "section07-tactics",
+]
 STEP_WEIGHT = 14  # ~14 points per step, 7 steps ≈ 100
 
 
@@ -44,14 +52,14 @@ Unfilled: {unfilled_str}
 
 UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
-    name="update_strategy_calibration",
+    name="update_strategy_section01_calibration",
     description="Set calibration: goal, budget, timeline. Creates strategy doc if needed.",
     parameters={
         "type": "object",
         "properties": {
             "idea_slug": {"type": "string", "description": "Idea slug from discovery path"},
             "hyp_slug": {"type": "string", "description": "Hypothesis slug from discovery path"},
-            "calibration": {
+            "section01-calibration": {
                 "type": "object",
                 "properties": {
                     "goal": {"type": "string", "enum": ["waitlist", "leads", "demos", "paid_conversions"]},
@@ -66,7 +74,7 @@ UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
             },
             "new_score": {"type": "integer", "description": "Updated score after this step"},
         },
-        "required": ["idea_slug", "hyp_slug", "calibration", "new_score"],
+        "required": ["idea_slug", "hyp_slug", "section01-calibration", "new_score"],
         "additionalProperties": False,
     },
 )
@@ -78,14 +86,14 @@ UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
 
 UPDATE_DIAGNOSTIC_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
-    name="update_strategy_diagnostic",
-    description="Set diagnostic: hypothesis classification, unknowns, feasibility. Requires calibration.",
+    name="update_strategy_section02_diagnostic",
+    description="Set diagnostic: hypothesis classification, unknowns, feasibility. Requires section01-calibration.",
     parameters={
         "type": "object",
         "properties": {
             "idea_slug": {"type": "string"},
             "hyp_slug": {"type": "string"},
-            "diagnostic": {
+            "section02-diagnostic": {
                 "type": "object",
                 "properties": {
                     "normalized_hypothesis": {"type": "string"},
@@ -100,7 +108,7 @@ UPDATE_DIAGNOSTIC_TOOL = ckit_cloudtool.CloudTool(
             },
             "new_score": {"type": "integer"},
         },
-        "required": ["idea_slug", "hyp_slug", "diagnostic", "new_score"],
+        "required": ["idea_slug", "hyp_slug", "section02-diagnostic", "new_score"],
         "additionalProperties": False,
     },
 )
@@ -112,14 +120,14 @@ UPDATE_DIAGNOSTIC_TOOL = ckit_cloudtool.CloudTool(
 
 UPDATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
-    name="update_strategy_metrics",
-    description="Set metrics: KPIs, stop/accelerate rules. Requires diagnostic.",
+    name="update_strategy_section03_metrics",
+    description="Set metrics: KPIs, stop/accelerate rules. Requires section02-diagnostic.",
     parameters={
         "type": "object",
         "properties": {
             "idea_slug": {"type": "string"},
             "hyp_slug": {"type": "string"},
-            "metrics": {
+            "section03-metrics": {
                 "type": "object",
                 "properties": {
                     "primary_kpi": {"type": "string"},
@@ -159,7 +167,7 @@ UPDATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
             },
             "new_score": {"type": "integer"},
         },
-        "required": ["idea_slug", "hyp_slug", "metrics", "new_score"],
+        "required": ["idea_slug", "hyp_slug", "section03-metrics", "new_score"],
         "additionalProperties": False,
     },
 )
@@ -171,14 +179,14 @@ UPDATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
 
 UPDATE_SEGMENT_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
-    name="update_strategy_segment",
-    description="Set segment: ICP, JTBD, journey. Requires metrics.",
+    name="update_strategy_section04_segment",
+    description="Set segment: ICP, JTBD, journey. Requires section03-metrics.",
     parameters={
         "type": "object",
         "properties": {
             "idea_slug": {"type": "string"},
             "hyp_slug": {"type": "string"},
-            "segment": {
+            "section04-segment": {
                 "type": "object",
                 "properties": {
                     "label": {"type": "string"},
@@ -211,7 +219,7 @@ UPDATE_SEGMENT_TOOL = ckit_cloudtool.CloudTool(
             },
             "new_score": {"type": "integer"},
         },
-        "required": ["idea_slug", "hyp_slug", "segment", "new_score"],
+        "required": ["idea_slug", "hyp_slug", "section04-segment", "new_score"],
         "additionalProperties": False,
     },
 )
@@ -223,14 +231,14 @@ UPDATE_SEGMENT_TOOL = ckit_cloudtool.CloudTool(
 
 UPDATE_MESSAGING_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
-    name="update_strategy_messaging",
-    description="Set messaging: value prop, angles, objections. Requires segment.",
+    name="update_strategy_section05_messaging",
+    description="Set messaging: value prop, angles, objections. Requires section04-segment.",
     parameters={
         "type": "object",
         "properties": {
             "idea_slug": {"type": "string"},
             "hyp_slug": {"type": "string"},
-            "messaging": {
+            "section05-messaging": {
                 "type": "object",
                 "properties": {
                     "value_prop": {"type": "string"},
@@ -267,7 +275,7 @@ UPDATE_MESSAGING_TOOL = ckit_cloudtool.CloudTool(
             },
             "new_score": {"type": "integer"},
         },
-        "required": ["idea_slug", "hyp_slug", "messaging", "new_score"],
+        "required": ["idea_slug", "hyp_slug", "section05-messaging", "new_score"],
         "additionalProperties": False,
     },
 )
@@ -279,14 +287,14 @@ UPDATE_MESSAGING_TOOL = ckit_cloudtool.CloudTool(
 
 UPDATE_CHANNELS_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
-    name="update_strategy_channels",
-    description="Set channels: selection, test cells, budget. Requires messaging.",
+    name="update_strategy_section06_channels",
+    description="Set channels: selection, test cells, budget. Requires section05-messaging.",
     parameters={
         "type": "object",
         "properties": {
             "idea_slug": {"type": "string"},
             "hyp_slug": {"type": "string"},
-            "channels": {
+            "section06-channels": {
                 "type": "object",
                 "properties": {
                     "selected": {
@@ -326,7 +334,7 @@ UPDATE_CHANNELS_TOOL = ckit_cloudtool.CloudTool(
             },
             "new_score": {"type": "integer"},
         },
-        "required": ["idea_slug", "hyp_slug", "channels", "new_score"],
+        "required": ["idea_slug", "hyp_slug", "section06-channels", "new_score"],
         "additionalProperties": False,
     },
 )
@@ -338,14 +346,14 @@ UPDATE_CHANNELS_TOOL = ckit_cloudtool.CloudTool(
 
 UPDATE_TACTICS_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
-    name="update_strategy_tactics",
-    description="Set tactics: campaigns, creatives, landing, tracking. Requires channels. Final step.",
+    name="update_strategy_section07_tactics",
+    description="Set tactics: campaigns, creatives, landing, tracking. Requires section06-channels. Final step.",
     parameters={
         "type": "object",
         "properties": {
             "idea_slug": {"type": "string"},
             "hyp_slug": {"type": "string"},
-            "tactics": {
+            "section07-tactics": {
                 "type": "object",
                 "properties": {
                     "campaigns": {
@@ -404,10 +412,35 @@ UPDATE_TACTICS_TOOL = ckit_cloudtool.CloudTool(
             },
             "new_score": {"type": "integer"},
         },
-        "required": ["idea_slug", "hyp_slug", "tactics", "new_score"],
+        "required": ["idea_slug", "hyp_slug", "section07-tactics", "new_score"],
         "additionalProperties": False,
     },
 )
+
+
+# =============================================================================
+# SCHEMA BUILDER
+# =============================================================================
+
+def build_schema_from_tools() -> Dict[str, Any]:
+    """Extract schema from tool definitions for inclusion in strategy doc."""
+    tool_map = {
+        "section01-calibration": UPDATE_CALIBRATION_TOOL,
+        "section02-diagnostic": UPDATE_DIAGNOSTIC_TOOL,
+        "section03-metrics": UPDATE_METRICS_TOOL,
+        "section04-segment": UPDATE_SEGMENT_TOOL,
+        "section05-messaging": UPDATE_MESSAGING_TOOL,
+        "section06-channels": UPDATE_CHANNELS_TOOL,
+        "section07-tactics": UPDATE_TACTICS_TOOL,
+    }
+    schema = {}
+    for step, tool in tool_map.items():
+        step_schema = tool.parameters["properties"][step].copy()
+        # XXX replace with a translation function
+        step_schema["title"] = step.split("-", 1)[1].capitalize()
+        step_schema["description"] = tool.description
+        schema[step] = step_schema
+    return schema
 
 
 # =============================================================================
@@ -437,16 +470,20 @@ async def handle_update_strategy(
         doc = {
             "strategy": {
                 "meta": {"created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()},
-                "progress": {"score": 0, "step": "calibration"},
-                "calibration": None,
-                "diagnostic": None,
-                "metrics": None,
-                "segment": None,
-                "messaging": None,
-                "channels": None,
-                "tactics": None,
+                "progress": {"score": 0, "step": "section01-calibration"},
+                "schema": build_schema_from_tools(),
+                "section01-calibration": None,
+                "section02-diagnostic": None,
+                "section03-metrics": None,
+                "section04-segment": None,
+                "section05-messaging": None,
+                "section06-channels": None,
+                "section07-tactics": None,
             }
         }
+    # Ensure schema exists in older docs
+    if "schema" not in doc["strategy"]:
+        doc["strategy"]["schema"] = build_schema_from_tools()
 
     # Validate gating
     step_idx = PIPELINE.index(step)
@@ -507,31 +544,31 @@ async def owl_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.Ro
 
     @rcx.on_tool_call(UPDATE_CALIBRATION_TOOL.name)
     async def toolcall_calibration(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
-        return await handle_update_strategy("calibration", toolcall, args, rcx, pdoc_integration)
+        return await handle_update_strategy("section01-calibration", toolcall, args, rcx, pdoc_integration)
 
     @rcx.on_tool_call(UPDATE_DIAGNOSTIC_TOOL.name)
     async def toolcall_diagnostic(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
-        return await handle_update_strategy("diagnostic", toolcall, args, rcx, pdoc_integration)
+        return await handle_update_strategy("section02-diagnostic", toolcall, args, rcx, pdoc_integration)
 
     @rcx.on_tool_call(UPDATE_METRICS_TOOL.name)
     async def toolcall_metrics(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
-        return await handle_update_strategy("metrics", toolcall, args, rcx, pdoc_integration)
+        return await handle_update_strategy("section03-metrics", toolcall, args, rcx, pdoc_integration)
 
     @rcx.on_tool_call(UPDATE_SEGMENT_TOOL.name)
     async def toolcall_segment(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
-        return await handle_update_strategy("segment", toolcall, args, rcx, pdoc_integration)
+        return await handle_update_strategy("section04-segment", toolcall, args, rcx, pdoc_integration)
 
     @rcx.on_tool_call(UPDATE_MESSAGING_TOOL.name)
     async def toolcall_messaging(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
-        return await handle_update_strategy("messaging", toolcall, args, rcx, pdoc_integration)
+        return await handle_update_strategy("section05-messaging", toolcall, args, rcx, pdoc_integration)
 
     @rcx.on_tool_call(UPDATE_CHANNELS_TOOL.name)
     async def toolcall_channels(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
-        return await handle_update_strategy("channels", toolcall, args, rcx, pdoc_integration)
+        return await handle_update_strategy("section06-channels", toolcall, args, rcx, pdoc_integration)
 
     @rcx.on_tool_call(UPDATE_TACTICS_TOOL.name)
     async def toolcall_tactics(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
-        return await handle_update_strategy("tactics", toolcall, args, rcx, pdoc_integration)
+        return await handle_update_strategy("section07-tactics", toolcall, args, rcx, pdoc_integration)
 
     @rcx.on_tool_call(fi_pdoc.POLICY_DOCUMENT_TOOL.name)
     async def toolcall_pdoc(toolcall: ckit_cloudtool.FCloudtoolCall, args: Dict[str, Any]) -> str:
