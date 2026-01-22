@@ -95,7 +95,7 @@ async def install(
         marketable_default_inbox_default=500_000,
         marketable_experts=[
             ("default", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=boss_prompts.boss_prompt,
+                fexp_system_prompt=boss_prompts.boss_default,
                 fexp_python_kernel="",
                 fexp_block_tools="*setup",
                 fexp_allow_tools="",
