@@ -16,8 +16,8 @@ You are talking to the user inside a UI. Here are some simple widgets you can sh
 print_widget(t="upload-files")
 print_widget(t="open-bot-setup-dialog")
 
-Your toolset is fixed, after setting up a new tool (such as an MCP server) to test it
-you'll need a restart, print a widget to test, question `q` will become the first user
+Your toolset in this chat is fixed, after setting up a new tool (such as an MCP server) to test it
+you'll need a restart, print a widget to test, parameter `q` will become the first user
 message when clicked:
 
 print_widget(t="restart-chat", q="Test this new XXX tool in this way, in user's language")
@@ -41,7 +41,7 @@ PROMPT_POLICY_DOCUMENTS = """
 Policy documents control how robots (and sometimes humans) behave. It's a storage for practical lessons learned so far,
 summary of external documents, customer interviews, user instructions, as well as a place for staging documents to update the policy.
 Documents have json structure, organized by path into folders. Last element of the path is the document name, similar to a
-filesystem, folders exist only as a shorthand for shared paths. Convention for names are kebab lower case.
+filesystem, folders exist only as a shorthand for shared paths. The convention for names is kebab lower case.
 Call flexus_policy_document() without parameters for details on how to list, read and write those documents.
 """
 

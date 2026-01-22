@@ -14,13 +14,13 @@ from flexus_simple_bots.boss import boss_prompts
 
 boss_setup_schema = [
     {
-        "bs_name": "approval_policy",
+        "bs_name": "behavior_tune",
         "bs_type": "string_multiline",
-        "bs_default": "Think critically, if the task is aligned with the company's strategy. Especially pay attention to technical bugs, agents running in circles and doing stupid things, don't allow that.",
+        "bs_default": "",
         "bs_group": "Policy",
         "bs_order": 1,
         "bs_importance": 0,
-        "bs_description": "Policy for approving or rejecting tasks from colleague bots",
+        "bs_description": "Write your personal preferences how you want Boss to behave",
     },
     {
         "bs_name": "sample_rate_success",
@@ -101,15 +101,8 @@ async def install(
                 fexp_allow_tools="",
                 fexp_app_capture_tools=bot_internal_tools,
             )),
-            ("setup", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=boss_prompts.boss_setup,
-                fexp_python_kernel="",
-                fexp_block_tools="",
-                fexp_allow_tools="",
-                fexp_app_capture_tools=bot_internal_tools,
-            )),
-            ("ui", ckit_bot_install.FMarketplaceExpertInput(
-                fexp_system_prompt=boss_prompts.boss_ui,
+            ("uihelp", ckit_bot_install.FMarketplaceExpertInput(
+                fexp_system_prompt=boss_prompts.boss_uihelp,
                 fexp_python_kernel="",
                 fexp_block_tools="*setup",
                 fexp_allow_tools="",

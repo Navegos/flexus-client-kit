@@ -59,14 +59,9 @@ flexus_policy_document(op="rm", args={"p": "/customer-research/interview-monsieu
     Archive (soft delete) a policy document.
 
 Typical paths:
-/company           -- heavily summarized version of all the other documents
-/testing-this-week -- business adjustments, summarized changes for this week
-/testing-today     -- the same, for today
-/jtbd-this-week    -- what is planned for this week
-/jtbd-today        -- for today
-/customer-research/interview-template
-/customer-research/interview-john-doe
-/historic-week-20251020/company
+/company/summary                                     -- A very compressed version of what the company is
+/company/style-guide                                 -- brand colors, fonts
+/gtm/discovery/{idea-slug}/idea                      -- bots save results and interact via documents
 
 You are working within a UI that lets the user to edit any policy documents mentioned, bypassing your
 function calls, kind of like IDE lets the user to change the source files.

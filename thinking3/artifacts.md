@@ -15,6 +15,12 @@ Why:
 ## File Structure
 
 ```
+/company/
+├── summary                                     # A very compressed version of what the company is
+├── product                                     # Product details
+├── style-guide                                 # Brand colors, fonts
+└── ad-ops-config                               # Facebook/LinkedIn account IDs
+
 /gtm/
 ├── product/
 │   └── core-truth                              # What the product actually does (not features)
@@ -36,16 +42,11 @@ Why:
 │   └── {idea-slug}--{hypothesis-slug}/
 │       └── runtime                             # SINGLE DOC: campaigns + spend + signals
 │
-├── learning/
-│   ├── verdicts/
-│   │   └── {idea}--{hyp}--verdict              # Scale/Iterate/Kill decision
-│   ├── insights                                # Accumulated market truths
-│   └── knowledge-graph                         # What works for which ICP
-│
-└── company/
-    ├── strategy                                # Mission, constraints
-    ├── style-guide                             # Brand colors, fonts
-    └── ad-ops-config                           # Facebook/LinkedIn account IDs
+└── learning/
+    ├── verdicts/
+    │   └── {idea}--{hyp}--verdict              # Scale/Iterate/Kill decision
+    ├── insights                                # Accumulated market truths
+    └── knowledge-graph                         # What works for which ICP
 ```
 
 
