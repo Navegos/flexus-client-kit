@@ -555,10 +555,14 @@ async def handle_update_strategy(
     rcx: ckit_bot_exec.RobotContext,
     pdoc_integration: fi_pdoc.IntegrationPdoc,
 ) -> str:
-    idea_slug = args["idea_slug"]
-    hyp_slug = args["hyp_slug"]
-    step_data = args[step]
-    new_score = args["new_score"]
+    idea_slug = args.get("idea_slug")
+    hyp_slug = args.get("hyp_slug")
+    step_data = args.get(step)
+    new_score = args.get("new_score")
+    if idea_slug is None or hyp_slug is None or step_data is None or new_score is None:
+        logger.error("Hmm it's a strict tool but have missing params anyway, idea_slug=%r, hyp_slug=%r, step_data=%r, new_score=%r",
+                idea_slug, hyp_slug, type(step_data), new_score)
+        return "Check if have provided all the parameters\n\nThe document was not changed, fix the parameters and call again.\n\n"
 
     caller_fuser_id = ckit_external_auth.get_fuser_id_from_rcx(rcx, toolcall.fcall_ft_id)
     path = f"/gtm/strategy/{idea_slug}--{hyp_slug}/strategy"
