@@ -53,7 +53,7 @@ Unfilled: {unfilled_str}
 UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
     name="update_strategy_section01_calibration",
-    description="Set calibration: goal, budget, timeline. Creates strategy doc if needed.",
+    description="Set calibration: stage, budget, timeline, hypothesis, context, product. Creates strategy doc if needed.",
     parameters={
         "type": "object",
         "properties": {
@@ -62,14 +62,14 @@ UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
             "section01-calibration": {
                 "type": "object",
                 "properties": {
-                    "goal": {"type": "string", "enum": ["waitlist", "leads", "demos", "paid_conversions"]},
-                    "success_definition": {"type": "string", "description": "What counts as win"},
-                    "learning_budget": {"type": "number", "description": "Budget in USD"},
-                    "max_cpl": {"type": "number", "description": "Max cost per lead"},
-                    "timeline_days": {"type": "integer", "description": "Days to run"},
-                    "risk_acknowledgement": {"type": "boolean"},
+                    "stage": {"type": "string", "enum": ["idea", "prototype", "mvp", "growth"]},
+                    "budget": {"type": "string", "description": "Budget description including channels (e.g. digital, offline)"},
+                    "timeline": {"type": "string", "description": "Timeline description with goals"},
+                    "hypothesis": {"type": "string", "description": "Full hypothesis: segment, problem, solution, test goal"},
+                    "additional_context": {"type": "string", "description": "Current state, test approach, constraints"},
+                    "product_description": {"type": "string", "description": "What the product/service is"},
                 },
-                "required": ["goal", "success_definition", "learning_budget", "max_cpl", "timeline_days", "risk_acknowledgement"],
+                "required": ["stage", "budget", "timeline", "hypothesis", "additional_context", "product_description"],
                 "additionalProperties": False,
             },
             "new_score": {"type": "integer", "description": "Updated score after this step"},
