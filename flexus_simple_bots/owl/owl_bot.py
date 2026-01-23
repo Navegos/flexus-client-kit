@@ -53,7 +53,7 @@ Unfilled: {unfilled_str}
 UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
     name="update_strategy_section01_calibration",
-    description="Set calibration: stage, budget, timeline, hypothesis, context, product. Creates strategy doc if needed.",
+    description="Collect initial input for marketing strategy: what we're testing and constraints. Creates strategy doc if needed.",
     parameters={
         "type": "object",
         "properties": {
@@ -62,14 +62,13 @@ UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
             "section01-calibration": {
                 "type": "object",
                 "properties": {
-                    "stage": {"type": "string", "enum": ["idea", "prototype", "mvp", "growth"]},
                     "budget": {"type": "string", "description": "Budget description including channels (e.g. digital, offline)"},
                     "timeline": {"type": "string", "description": "Timeline description with goals"},
                     "hypothesis": {"type": "string", "description": "Full hypothesis: segment, problem, solution, test goal"},
                     "additional_context": {"type": "string", "description": "Current state, test approach, constraints"},
                     "product_description": {"type": "string", "description": "What the product/service is"},
                 },
-                "required": ["stage", "budget", "timeline", "hypothesis", "additional_context", "product_description"],
+                "required": ["budget", "timeline", "hypothesis", "additional_context", "product_description"],
                 "additionalProperties": False,
             },
             "new_score": {"type": "integer", "description": "Updated score after this step"},
@@ -87,7 +86,7 @@ UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
 UPDATE_DIAGNOSTIC_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
     name="update_strategy_section02_diagnostic",
-    description="Set diagnostic: hypothesis classification, unknowns, feasibility. Requires section01-calibration.",
+    description="Analyze hypothesis: classify type, identify unknowns, assess feasibility and test mechanisms. Requires section01-calibration.",
     parameters={
         "type": "object",
         "properties": {
@@ -96,14 +95,33 @@ UPDATE_DIAGNOSTIC_TOOL = ckit_cloudtool.CloudTool(
             "section02-diagnostic": {
                 "type": "object",
                 "properties": {
-                    "normalized_hypothesis": {"type": "string"},
-                    "primary_type": {"type": "string", "enum": ["value", "segment", "messaging", "channel", "pricing", "conversion"]},
+                    "normalized_hypothesis": {"type": "string", "description": "Clear restatement of what we're testing"},
+                    "primary_type": {"type": "string", "enum": ["value", "segment", "messaging", "channel", "pricing", "conversion", "retention"]},
+                    "primary_type_reasoning": {"type": "string", "description": "Why this type applies"},
+                    "secondary_types": {"type": "array", "items": {"type": "string", "enum": ["value", "segment", "messaging", "channel", "pricing", "conversion", "retention"]}},
+                    "secondary_types_reasoning": {"type": "string", "description": "Why these secondary types apply"},
+                    "testable_with_traffic": {"type": "boolean"},
+                    "recommended_test_mechanisms": {"type": "array", "items": {"type": "string", "enum": ["paid_traffic", "content", "waitlist", "outbound", "partnerships"]}},
                     "uncertainty_level": {"type": "string", "enum": ["low", "medium", "high", "extreme"]},
-                    "feasibility_score": {"type": "number", "minimum": 0, "maximum": 1},
+                    "uncertainty_reasoning": {"type": "string", "description": "What makes it this uncertainty level"},
                     "key_unknowns": {"type": "array", "items": {"type": "string"}},
-                    "detailed_analysis": {"type": "string"},
+                    "limitations": {"type": "array", "items": {"type": "string"}},
+                    "needs_additional_methods": {"type": "array", "items": {"type": "string", "enum": ["none", "custdev", "desk_research", "product_experiment"]}},
+                    "feasibility_score": {"type": "number", "minimum": 0, "maximum": 1},
+                    "feasibility_reasoning": {"type": "string", "description": "What makes it feasible or not"},
+                    "detailed_analysis": {"type": "string", "description": "Rich markdown: what we're testing, why it matters, what the answer tells us"},
+                    "key_decisions_ahead": {"type": "array", "items": {"type": "string"}},
+                    "next_steps": {"type": "array", "items": {"type": "string"}},
+                    "questions_to_resolve": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["normalized_hypothesis", "primary_type", "uncertainty_level", "feasibility_score", "key_unknowns", "detailed_analysis"],
+                "required": [
+                    "normalized_hypothesis", "primary_type", "primary_type_reasoning",
+                    "secondary_types", "secondary_types_reasoning",
+                    "testable_with_traffic", "recommended_test_mechanisms",
+                    "uncertainty_level", "uncertainty_reasoning", "key_unknowns", "limitations",
+                    "needs_additional_methods", "feasibility_score", "feasibility_reasoning",
+                    "detailed_analysis", "key_decisions_ahead", "next_steps", "questions_to_resolve"
+                ],
                 "additionalProperties": False,
             },
             "new_score": {"type": "integer"},
@@ -121,7 +139,7 @@ UPDATE_DIAGNOSTIC_TOOL = ckit_cloudtool.CloudTool(
 UPDATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
     name="update_strategy_section03_metrics",
-    description="Set metrics: KPIs, stop/accelerate rules. Requires section02-diagnostic.",
+    description="Define success metrics: KPIs, targets, MDE, stop/accelerate rules with interpretation guide. Requires section02-diagnostic.",
     parameters={
         "type": "object",
         "properties": {
@@ -131,7 +149,30 @@ UPDATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
                 "type": "object",
                 "properties": {
                     "primary_kpi": {"type": "string"},
+                    "primary_kpi_reasoning": {"type": "string"},
+                    "secondary_kpis": {"type": "array", "items": {"type": "string"}},
                     "target_values": {"type": "object", "additionalProperties": {"type": "number"}},
+                    "target_values_reasoning": {"type": "string"},
+                    "mde": {
+                        "type": "object",
+                        "properties": {
+                            "relative_change": {"type": "number"},
+                            "confidence": {"type": "number"},
+                        },
+                        "required": ["relative_change", "confidence"],
+                        "additionalProperties": False,
+                    },
+                    "mde_reasoning": {"type": "string"},
+                    "min_samples": {
+                        "type": "object",
+                        "properties": {
+                            "impressions_per_cell": {"type": "integer"},
+                            "clicks_per_cell": {"type": "integer"},
+                            "conversions_per_cell": {"type": "integer"},
+                        },
+                        "required": ["impressions_per_cell", "clicks_per_cell", "conversions_per_cell"],
+                        "additionalProperties": False,
+                    },
                     "stop_rules": {
                         "type": "array",
                         "items": {
@@ -140,12 +181,14 @@ UPDATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
                                 "metric": {"type": "string"},
                                 "operator": {"type": "string"},
                                 "threshold": {"type": "number"},
+                                "min_events": {"type": "integer"},
                                 "action": {"type": "string"},
                             },
-                            "required": ["metric", "operator", "threshold", "action"],
+                            "required": ["metric", "operator", "threshold", "min_events", "action"],
                             "additionalProperties": False,
                         },
                     },
+                    "stop_rules_reasoning": {"type": "string"},
                     "accelerate_rules": {
                         "type": "array",
                         "items": {
@@ -154,15 +197,36 @@ UPDATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
                                 "metric": {"type": "string"},
                                 "operator": {"type": "string"},
                                 "threshold": {"type": "number"},
+                                "min_conversions": {"type": "integer"},
                                 "action": {"type": "string"},
                             },
-                            "required": ["metric", "operator", "threshold", "action"],
+                            "required": ["metric", "operator", "threshold", "min_conversions", "action"],
                             "additionalProperties": False,
                         },
                     },
+                    "accelerate_rules_reasoning": {"type": "string"},
+                    "analysis_plan": {"type": "string"},
                     "detailed_analysis": {"type": "string"},
+                    "interpretation_guide": {
+                        "type": "object",
+                        "properties": {
+                            "success_scenario": {"type": "string"},
+                            "failure_scenario": {"type": "string"},
+                            "inconclusive_scenario": {"type": "string"},
+                        },
+                        "required": ["success_scenario", "failure_scenario", "inconclusive_scenario"],
+                        "additionalProperties": False,
+                    },
+                    "next_steps": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["primary_kpi", "target_values", "stop_rules", "accelerate_rules", "detailed_analysis"],
+                "required": [
+                    "primary_kpi", "primary_kpi_reasoning", "secondary_kpis",
+                    "target_values", "target_values_reasoning",
+                    "mde", "mde_reasoning", "min_samples",
+                    "stop_rules", "stop_rules_reasoning",
+                    "accelerate_rules", "accelerate_rules_reasoning",
+                    "analysis_plan", "detailed_analysis", "interpretation_guide", "next_steps"
+                ],
                 "additionalProperties": False,
             },
             "new_score": {"type": "integer"},
