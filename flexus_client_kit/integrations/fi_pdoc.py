@@ -166,7 +166,7 @@ class IntegrationPdoc:
                 p = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "p", "/")
                 if self.is_fake:
                     return await ckit_scenario.scenario_generate_tool_result_via_model(self.fclient, toolcall, open(__file__).read())
-                result = await self.pdoc_list(p, fuser_id)
+                result = await self.pdoc_list(p, fuser_id, depth=5)
                 tree_text, doc_count, folder_count = _format_tree(result, p)
                 r += f"Listing {p}\n\n"
                 r += tree_text
@@ -263,18 +263,18 @@ class IntegrationPdoc:
 
         return r
 
-    async def pdoc_list(self, p: str = "/", fuser_id: str = None) -> List[PdocListItem]:
+    async def pdoc_list(self, p: str = "/", fuser_id: str = None, depth: int = 1) -> List[PdocListItem]:
         http = await self.fclient.use_http()
         async with http as h:
             result = await h.execute(
                 gql.gql(f"""
-                    query PdocList($fgroup_id: String!, $p: String!, $fuser_id: String) {{
-                        policydoc_list(fgroup_id: $fgroup_id, p: $p, fuser_id: $fuser_id) {{
+                    query PdocList($fgroup_id: String!, $p: String!, $fuser_id: String, $depth: Int) {{
+                        policydoc_list(fgroup_id: $fgroup_id, p: $p, fuser_id: $fuser_id, depth: $depth) {{
                             {gql_utils.gql_fields(PdocListItem)}
                         }}
                     }}
                 """),
-                variable_values={"fgroup_id": self.fgroup_id, "p": p, "fuser_id": fuser_id},
+                variable_values={"fgroup_id": self.fgroup_id, "p": p, "fuser_id": fuser_id, "depth": depth},
             )
             items = result.get("policydoc_list", [])
             return [gql_utils.dataclass_from_dict(item, PdocListItem) for item in items]
