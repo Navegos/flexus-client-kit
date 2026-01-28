@@ -50,7 +50,6 @@ async def install(
     bot_tools_json = json.dumps([t.openai_style_tool() for t in tools])
     agent_tools_json = json.dumps([t.openai_style_tool() for t in owl_strategist_bot.AGENT_TOOLS])
 
-    # XXX pictures will be added later
     pic_big = None
     pic_small = None
     pic_big_path = Path(__file__).with_name("owl_strategist-1024x1536.webp")

@@ -15,6 +15,7 @@ from flexus_client_kit.integrations import fi_pdoc
 from flexus_simple_bots.owl_strategist import owl_strategist_install
 from flexus_simple_bots.owl_strategist.skills import diagnostic as skill_diagnostic
 from flexus_simple_bots.owl_strategist.skills import tactics as skill_tactics
+from flexus_simple_bots.version_common import SIMPLE_BOTS_COMMON_VERSION
 
 logger = logging.getLogger("bot_owl_strategist")
 
@@ -23,7 +24,7 @@ TACTICS_DOCS = skill_tactics.TACTICS_DOCS
 
 
 BOT_NAME = "owl_strategist"
-BOT_VERSION = "1.0.7"
+BOT_VERSION = SIMPLE_BOTS_COMMON_VERSION
 BOT_VERSION_INT = ckit_client.marketplace_version_as_int(BOT_VERSION)
 
 # Pipeline: strict sequential order
