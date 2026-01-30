@@ -452,7 +452,7 @@ class IntegrationTelegram:
         return str(parsed)
 
     async def handle_emessage(self, emsg: ckit_bot_query.FExternalMessageOutput) -> None:
-        payload = emsg.emessage_payload if isinstance(emsg.emessage_payload, dict) else json.loads(emsg.emessage_payload)
+        payload = emsg.emsg_payload if isinstance(emsg.emsg_payload, dict) else json.loads(emsg.emsg_payload)
         update = telegram.Update.de_json(payload, bot=None)
         msg = update.message or update.edited_message
         if not msg or not msg.from_user:

@@ -38,14 +38,14 @@ class FPersonaScheduleOutput:
 
 @dataclass
 class FExternalMessageOutput:
-    emessage_id: str
-    emessage_persona_id: str
-    emessage_type: str
-    emessage_from: str
-    emessage_to: str
-    emessage_external_id: str
-    emessage_payload: Any
-    emessage_created_ts: float
+    emsg_id: str
+    emsg_persona_id: str
+    emsg_type: str
+    emsg_from: str
+    emsg_to: str
+    emsg_external_id: str
+    emsg_payload: Any
+    emsg_created_ts: float
     ws_id: str
 
 

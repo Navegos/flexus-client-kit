@@ -72,7 +72,7 @@ class RobotContext:
         self._handler_updated_task: Optional[Callable[[ckit_kanban.FPersonaKanbanTaskOutput], Awaitable[None]]] = None
         self._handler_per_tool: Dict[str, Callable[[Dict[str, Any]], Awaitable[str]]] = {}
         self._handler_per_erp_table_change: Dict[str, Callable[[str, Optional[Any], Optional[Any]], Awaitable[None]]] = {}
-        self._handler_per_emessage_type: Dict[str, Callable[[ckit_bot_query.FExternalMessageOutput], Awaitable[None]]] = {}
+        self._handler_per_emsg_type: Dict[str, Callable[[ckit_bot_query.FExternalMessageOutput], Awaitable[None]]] = {}
         self._restart_requested = False
         self._completed_initial_unpark = False
         self._parked_messages: Dict[str, ckit_ask_model.FThreadMessageOutput] = {}
@@ -122,7 +122,7 @@ class RobotContext:
 
     def on_emessage(self, channel: str):
         def decorator(handler: Callable[[ckit_bot_query.FExternalMessageOutput], Awaitable[None]]):
-            self._handler_per_emessage_type[channel] = handler
+            self._handler_per_emsg_type[channel] = handler
             return handler
         return decorator
 
@@ -177,21 +177,21 @@ class RobotContext:
 
         emessages = list(self._parked_emessages.values())
         self._parked_emessages.clear()
-        handled_emessage_ids = []
+        handled_emsg_ids = []
         for emsg in emessages:
             did_anything = True
-            handler = self._handler_per_emessage_type.get(emsg.emessage_type)
+            handler = self._handler_per_emsg_type.get(emsg.emsg_type)
             if handler:
                 try:
                     await handler(emsg)
-                    handled_emessage_ids.append(emsg.emessage_id)
+                    handled_emsg_ids.append(emsg.emsg_id)
                 except Exception as e:
-                    logger.error("%s error in on_emessage(%r) handler: %s\n%s", self.persona.persona_id, emsg.emessage_type, type(e).__name__, e, exc_info=e)
-        if handled_emessage_ids:
+                    logger.error("%s error in on_emessage(%r) handler: %s\n%s", self.persona.persona_id, emsg.emsg_type, type(e).__name__, e, exc_info=e)
+        if handled_emsg_ids:
             async with (await self.fclient.use_http()) as http:
                 await http.execute(gql.gql("""mutation DeleteEmessages($ids: [String!]!) {
-                    emessages_delete(emessage_ids: $ids)
-                }"""), variable_values={"ids": handled_emessage_ids})
+                    emessages_delete(emsg_ids: $ids)
+                }"""), variable_values={"ids": handled_emsg_ids})
 
         mycalls = list(self._parked_toolcalls)
         self._parked_toolcalls.clear()
@@ -350,7 +350,7 @@ class BotsCollection:
         inprocess_tools: List[ckit_cloudtool.CloudTool],
         bot_main_loop: Callable[[ckit_client.FlexusClient, RobotContext], Awaitable[None]],
         subscribe_to_erp_tables: List[str] = [],
-        subscribe_to_emessage_types: List[str] = [],
+        subscribe_to_emsg_types: List[str] = [],
         running_test_scenario: bool = False,
         running_happy_yaml: str = "",
     ):
@@ -365,7 +365,7 @@ class BotsCollection:
         self.running_test_scenario = running_test_scenario
         self.running_happy_yaml = running_happy_yaml
         self.subscribe_to_erp_tables = subscribe_to_erp_tables
-        self.subscribe_to_emessage_types = subscribe_to_emessage_types
+        self.subscribe_to_emsg_types = subscribe_to_emsg_types
 
 
 async def subscribe_and_produce_callbacks(
@@ -388,8 +388,8 @@ async def subscribe_and_produce_callbacks(
         use_group_id = fclient.group_id if fclient.group_id else None
         use_ws_id_prefix = None if use_group_id else fclient.ws_id
         async for r in ws.subscribe(
-            gql.gql(f"""subscription KarenThreads($marketable_name: String!, $marketable_version: Int!, $inprocess_tool_names: [String!]!, $want_erp_tables: [String!]!, $want_emessage_types: [String!]!, $ws_id_prefix: String, $group_id: String) {{
-                bot_threads_calls_tasks(marketable_name: $marketable_name, marketable_version: $marketable_version, inprocess_tool_names: $inprocess_tool_names, max_threads: {MAX_THREADS}, want_personas: true, want_threads: true, want_messages: true, want_tasks: true, want_erp_tables: $want_erp_tables, want_emessage_types: $want_emessage_types, ws_id_prefix: $ws_id_prefix, group_id: $group_id) {{
+            gql.gql(f"""subscription KarenThreads($marketable_name: String!, $marketable_version: Int!, $inprocess_tool_names: [String!]!, $want_erp_tables: [String!]!, $want_emsg_types: [String!]!, $ws_id_prefix: String, $group_id: String) {{
+                bot_threads_calls_tasks(marketable_name: $marketable_name, marketable_version: $marketable_version, inprocess_tool_names: $inprocess_tool_names, max_threads: {MAX_THREADS}, want_personas: true, want_threads: true, want_messages: true, want_tasks: true, want_erp_tables: $want_erp_tables, want_emsg_types: $want_emsg_types, ws_id_prefix: $ws_id_prefix, group_id: $group_id) {{
                     {gql_utils.gql_fields(ckit_bot_query.FBotThreadsCallsTasks)}
                 }}
             }}"""),
@@ -398,7 +398,7 @@ async def subscribe_and_produce_callbacks(
                 "marketable_version": bc.marketable_version,
                 "inprocess_tool_names": [t.name for t in bc.inprocess_tools],
                 "want_erp_tables": bc.subscribe_to_erp_tables,
-                "want_emessage_types": bc.subscribe_to_emessage_types,
+                "want_emsg_types": bc.subscribe_to_emsg_types,
                 "ws_id_prefix": use_ws_id_prefix,
                 "group_id": use_group_id,
             },
@@ -535,8 +535,8 @@ async def subscribe_and_produce_callbacks(
                 if upd.news_action == "EMESSAGE" and upd.news_payload_emessage:
                     handled = True
                     emsg = upd.news_payload_emessage
-                    if bot := bc.bots_running.get(emsg.emessage_persona_id):
-                        bot.instance_rcx._parked_emessages[emsg.emessage_id] = emsg
+                    if bot := bc.bots_running.get(emsg.emsg_persona_id):
+                        bot.instance_rcx._parked_emessages[emsg.emsg_id] = emsg
                         bot.instance_rcx._parked_anything_new.set()
 
             elif upd.news_action == "INITIAL_UPDATES_OVER":
@@ -871,7 +871,7 @@ async def run_bots_in_this_group(
     scenario_fn: str,
     install_func: Callable[[ckit_client.FlexusClient, str], Awaitable[None]],
     subscribe_to_erp_tables: List[str] = [],
-    subscribe_to_emessage_types: List[str] = [],
+    subscribe_to_emsg_types: List[str] = [],
 ) -> None:
     marketable_version = ckit_client.marketplace_version_as_int(marketable_version_str)
 
@@ -931,7 +931,7 @@ async def run_bots_in_this_group(
         inprocess_tools=inprocess_tools,
         bot_main_loop=bot_main_loop,
         subscribe_to_erp_tables=subscribe_to_erp_tables,
-        subscribe_to_emessage_types=subscribe_to_emessage_types,
+        subscribe_to_emsg_types=subscribe_to_emsg_types,
         running_test_scenario=running_test_scenario,
         running_happy_yaml=running_happy_yaml,
     )
