@@ -21,8 +21,8 @@ MONGO_STORE_TOOL = ckit_cloudtool.CloudTool(
         "properties": {
             "op": {
                 "type": "string",
-                "enum": ["help", "list", "ls", "cat", "grep", "delete", "upload"],
-                "description": "Operation: list/ls (list files), cat (read file), grep (search), delete, upload",
+                "enum": ["help", "list", "ls", "cat", "grep", "delete", "upload", "save"],
+                "description": "Operation: list/ls (list files), cat (read file), grep (search), delete, upload (from disk), save (content directly)",
             },
             "args": {
                 "type": "object",
@@ -34,8 +34,9 @@ MONGO_STORE_TOOL = ckit_cloudtool.CloudTool(
                     "safety_valve": {"type": ["string", "null"], "description": "Max output size for cat, e.g. '10k'"},
                     "pattern": {"type": ["string", "null"], "description": "Python regex pattern for grep"},
                     "context": {"type": ["integer", "null"], "description": "Context lines around grep matches"},
+                    "content": {"type": ["string", "null"], "description": "Content for save op (JSON string or text)"},
                 },
-                "required": ["path", "lines_range", "safety_valve", "pattern", "context"],
+                "required": ["path", "lines_range", "safety_valve", "pattern", "context", "content"],
             },
         },
         "required": ["op", "args"],
@@ -55,6 +56,9 @@ list    - List stored files filtered by optional prefix.
 cat     - Read file contents
           args: path (required), optional lines_range ("1:20", ":20", "21:"), optional safety_valve (defaults to "10k")
 
+save    - Save content directly to MongoDB (no local file needed).
+          args: path (required), content (required, JSON string or text)
+
 delete  - Delete a stored file by exact path (no wildcards).
           args: path (required)
 
@@ -65,7 +69,8 @@ grep    - Search file contents using Python regex using per-line matching
 
 Examples:
   mongo_store(op="list", args={"path": "folder1/"})
-  mongo_store(op="cat", args={"path": "folder1/something_20250803.json", "lines_range": 0:40", "safety_valve": "10k"})
+  mongo_store(op="cat", args={"path": "folder1/something_20250803.json", "lines_range": "0:40", "safety_valve": "10k"})
+  mongo_store(op="save", args={"path": "investigations/abc123.json", "content": "{...json...}"})
   mongo_store(op="delete", args={"path": "folder1/something_20250803.json"})
   mongo_store(op="grep", args={"path": "tasks.txt", "pattern": "TODO", "context": 2})
 """
@@ -92,7 +97,25 @@ async def handle_mongo_store(
     if not op or "help" in op:
         return HELP
 
-    if op == "upload":
+    if op == "save":
+        if not path:
+            return f"Error: path parameter required for save operation\n\n{HELP}"
+        content = ckit_cloudtool.try_best_to_find_argument(args, model_produced_args, "content", "")
+        if not content:
+            return f"Error: content parameter required for save operation\n\n{HELP}"
+        path_error = validate_path(path)
+        if path_error:
+            return f"Error: {path_error}"
+        file_data = content.encode("utf-8")
+        existing_doc = await mongo_collection.find_one({"path": path}, {"mon_ctime": 1})
+        was_overwritten = existing_doc is not None
+        await ckit_mongo.mongo_store_file(mongo_collection, path, file_data, 60 * 60 * 24 * 365)
+        result_msg = f"Saved {path} -> MongoDB ({len(file_data)} bytes)"
+        if was_overwritten:
+            result_msg += " [OVERWRITTEN]"
+        return result_msg
+
+    elif op == "upload":
         if not path:
             return f"Error: path parameter required for upload operation\n\n{HELP}"
         realpath = os.path.join(workdir, path)
