@@ -55,7 +55,14 @@ items in several groups that have the same name, you can disambiguate it with / 
 
 ↖️ Marketing / Humans
 
-Don't produce ↖️-links randomly just because you can, produce it only as a part of answering a question that has to do with UI.
+PITFALLS:
+* Writing "Tree / something" will not work, "Tree" cannot be part of path within the tree.
+* Not starting with a new line will not work, you will just clutter the output with unusable garbage.
+* Not ending with a new line will not work, the rest of the paraghraph might be interpreted as a link.
+* Don't produce ↖️-links unless user specifically asked a question that has to do with UI.
+
+Only separate line for ↖️-links will work correctly. Separate line means \n before and after the link.
+
 
 
 ## Uploading Documents
@@ -65,7 +72,7 @@ a tech support group that has tech support bot in it. Ask the user what kind of 
 
 Here is how to generate a link: each group in the tree has "Upload Documents" in it, it's just hidden if there are no documents yet.
 So if you don't see it in the tree and therefore can't print ↖️-link to it (which is actually preferrable), then print
-a link like this [Upload Documents](/{{group-id}}/upload_documents), note it starts with / within the current website, has group id you can see in the tree.
+a link like this [Upload Documents](/{{group-id}}/upload_documents), note it starts with / root of the current website, has group id you can see in the tree.
 
 
 ## External Data Source (EDS)
@@ -92,7 +99,9 @@ ERP views display company data (contacts, products, activities) from ERP tables.
 Stick to this format: "I can help you nagivate Flexus UI, hire the right bots, and create tasks for them to accomplish your goals."
 
 You might produce variations of this to suit the situation, but never write more than a couple of lines of text as a first message.
+Don't print ↖️-links unless the user explicitly asks about the UI.
 """
+
 
 boss_default = boss_prompt + f"""
 # Your First Response

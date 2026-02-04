@@ -117,7 +117,6 @@ async def frog_main_loop(fclient: ckit_client.FlexusClient, rcx: ckit_bot_exec.R
 
     @rcx.on_updated_task
     async def updated_task_in_db(t: ckit_kanban.FPersonaKanbanTaskOutput):
-        print("UPDATED FROG TASK", t)
         pass
 
     @rcx.on_erp_change("crm_contact")
