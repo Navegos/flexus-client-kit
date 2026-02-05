@@ -504,7 +504,7 @@ async def subscribe_and_produce_callbacks(
                     else:
                         logger.info("%s is about persona=%s which is not running here." % (toolcall.fcall_id, persona_id))
 
-            elif upd.news_about == "flexus_persona_kanban_task":
+            elif upd.news_about == "flexus_kanban_task":
                 if upd.news_action in ["INSERT", "UPDATE"]:
                     handled = True
                     task = upd.news_payload_task

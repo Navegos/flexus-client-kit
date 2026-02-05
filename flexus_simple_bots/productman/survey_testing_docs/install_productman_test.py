@@ -21,7 +21,7 @@ async def main():
 
         print("Cleaning up previous test data...")
 
-        await my_prisma.flexus_persona_kanban_task.delete_many(
+        await my_prisma.flexus_kanban_task.delete_many(
             where={"persona_id": persona_id}
         )
         print(f"Deleted tasks for persona {persona_id}")
@@ -37,14 +37,14 @@ async def main():
             hypothesis_path,
         )
         print("Deleted test policy documents")
-        
+
         print("\nStarting fresh installation...")
-        
+
         ws = await my_prisma.flexus_workspace.find_unique(where={"ws_id": ws_id})
         if not ws:
             print(f"Workspace {ws_id} not found")
             return
-            
+
         marketplace_rec = await my_prisma.flexus_marketplace.find_first(
             where={
                 "marketable_name": "productman",
@@ -52,13 +52,13 @@ async def main():
             },
             order=[{"marketable_version": "desc"}]
         )
-        
+
         if not marketplace_rec:
             print("Productman not found in marketplace")
             return
-            
+
         print(f"Found productman version {marketplace_rec.marketable_version}")
-        
+
         persona_setup = {
             "featured_tools": ["survey"],
             "survey_enabled": True,
@@ -92,11 +92,11 @@ async def main():
             },
         )
         print(f"Created/updated persona {persona_id}")
-        
+
         await my_prisma.flexus_persona_schedule.delete_many(
             where={"sched_persona_id": persona_id}
         )
-        
+
         schedule_data = [
             {
                 "sched_persona_id": persona_id,
@@ -117,10 +117,10 @@ async def main():
                 "sched_marketplace": True,
             },
         ]
-        
+
         for sched in schedule_data:
             await my_prisma.flexus_persona_schedule.create(data=sched)
-        
+
         print(f"Created schedule records for {persona_id}")
 
         idea_content = json.loads((TEST_DOCS_DIR / "example_idea.json").read_text())
@@ -128,12 +128,12 @@ async def main():
 
         idea_path_display = "/product-ideas/idea001-dentist-samples/idea"
         hypothesis_path_display = "/product-hypotheses/idea001-hyp001-private-practice-dentists/hypothesis"
-        
+
         existing_idea = await my_prisma.query_raw(
             """SELECT * FROM flexus_policydoc WHERE pdoc_path = $1::ltree""",
             idea_path
         )
-        
+
         if existing_idea:
             await my_prisma.execute_raw(
                 """UPDATE flexus_policydoc SET pdoc_content = $1::jsonb, pdoc_modified_ts = EXTRACT(EPOCH FROM NOW()) WHERE pdoc_path = $2::ltree""",
@@ -142,7 +142,7 @@ async def main():
             )
         else:
             await my_prisma.execute_raw(
-                """INSERT INTO flexus_policydoc (owner_fuser_id, located_fgroup_id, pdoc_path, pdoc_content) 
+                """INSERT INTO flexus_policydoc (owner_fuser_id, located_fgroup_id, pdoc_path, pdoc_content)
                    VALUES ($1, $2, $3::ltree, $4::jsonb)""",
                 "alice@example.com",
                 fgroup_id,
@@ -150,12 +150,12 @@ async def main():
                 json.dumps(idea_content)
             )
         print(f"Created/updated idea document at {idea_path_display}")
-        
+
         existing_hypothesis = await my_prisma.query_raw(
             """SELECT * FROM flexus_policydoc WHERE pdoc_path = $1::ltree""",
             hypothesis_path
         )
-        
+
         if existing_hypothesis:
             await my_prisma.execute_raw(
                 """UPDATE flexus_policydoc SET pdoc_content = $1::jsonb, pdoc_modified_ts = EXTRACT(EPOCH FROM NOW()) WHERE pdoc_path = $2::ltree""",
@@ -164,7 +164,7 @@ async def main():
             )
         else:
             await my_prisma.execute_raw(
-                """INSERT INTO flexus_policydoc (owner_fuser_id, located_fgroup_id, pdoc_path, pdoc_content) 
+                """INSERT INTO flexus_policydoc (owner_fuser_id, located_fgroup_id, pdoc_path, pdoc_content)
                    VALUES ($1, $2, $3::ltree, $4::jsonb)""",
                 "alice@example.com",
                 fgroup_id,
@@ -172,7 +172,7 @@ async def main():
                 json.dumps(hypothesis_content)
             )
         print(f"Created/updated hypothesis document at {hypothesis_path_display}")
-        
+
         task_details = {
             "from_bot": "Productman",
             "description": "Run survey validation for dentist-samples hypothesis targeting private-practice-dentists. Use the hypothesis document for all details on segment, pains, solution, and validation metrics.\n\nBoss modification: Approved as it aligns with hypothesis-driven product development.",
@@ -182,7 +182,7 @@ async def main():
             "idea_path": idea_path_display,
             "policy_documents": [idea_path_display, hypothesis_path_display],
         }
-        
+
         experts = marketplace_rec.marketable_experts
         if "survey" not in experts:
             print("Warning: survey expert not found in experts, using default")
@@ -192,7 +192,7 @@ async def main():
 
         expert_id = experts.get(fexp_name, experts.get("default"))
         expert = await my_prisma.flexus_expert.find_unique(where={"fexp_id": expert_id})
-        
+
         current_time = time.time()
         task_data = {
             "persona_id": persona_id,
@@ -210,16 +210,16 @@ async def main():
             "ktask_done_ts": 0,
             "ktask_details": json.dumps(task_details),
         }
-        
-        task = await my_prisma.flexus_persona_kanban_task.create(data=task_data)
+
+        task = await my_prisma.flexus_kanban_task.create(data=task_data)
         print(f"Created kanban task {task.ktask_id}")
-        
+
         print("\nSetup complete!")
         print(f"- Persona: {persona_id}")
         print(f"- Idea: {idea_path_display}")
         print(f"- Hypothesis: {hypothesis_path_display}")
         print(f"- Task: {task.ktask_id} (expert: {fexp_name})")
-        
+
     finally:
         await my_prisma.disconnect()
 

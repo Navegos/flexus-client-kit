@@ -143,7 +143,7 @@ LLM generates tool_call in assistant message
 | `flexus_thread` | Thread state (ft_id, ft_error) | `@rcx.on_updated_thread` |
 | `flexus_thread_message` | Message content | `@rcx.on_updated_message` |
 | `flexus_tool_call` | Tool invocation (only if in inprocess_tool_names) | `@rcx.on_tool_call("name")` |
-| `flexus_persona_kanban_task` | Task state changes | `@rcx.on_updated_task` |
+| `flexus_kanban_task` | Task state changes | `@rcx.on_updated_task` |
 | `erp.*` | ERP table changes (if subscribed) | `@rcx.on_erp_change("table")` |
 
 ### Key Data Structures
