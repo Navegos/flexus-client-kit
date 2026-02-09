@@ -124,22 +124,6 @@ Panels or tabs are generated based on bs_group, so related parameters group toge
 The full list of all bs_type: string_short, string_long, string_multiline, bool, int, float.
 
 
-Custom Forms
-------------
-
-Custom HTML forms for editing policy documents. Put forms in `mybot/forms/{doctype}.html`.
-
-**CRITICAL**: Document must include `"microfrontend": "bot_name"` in meta for form to load:
-```json
-{"my_report": {"meta": {"microfrontend": "mybot", "created_at": "..."}, "content": "..."}}
-```
-
-Form loads from: `/v1/marketplace/{microfrontend}/{version}/forms/{top_level_key}.html`
-Without `microfrontend` field → generic JSON editor shown.
-
-See: `flexus_simple_bots/frog/frog_bot.py:183-199` (how to write docs), `frog/forms/pond_report.html` (form example)
-
-
 Bot Main Loop
 -------------
 
@@ -334,17 +318,6 @@ that will create a kanban task in the inbox of that bot.
 
 
 
-Reports (fi_report)
--------------------
-
-For generating analysis reports via parallel subchats → exported to HTML.
-Use policy documents (fi_pdoc) for persistent human-editable data; use fi_report for one-time analysis.
-
-Flow: `create_report()` → `process_report()` (spawns subchats) → `fill_report_section()` → auto-export HTML
-
-See: `flexus_client_kit/integrations/report/fi_report.py`, adspy bot for implementation example.
-
-
 Writing Logs
 ------------
 
@@ -358,6 +331,155 @@ Improving on Logs
 Writing a New Bot
 -----------------
 
+
+
+Policy Documents and Forms
+--------------------------
+
+Policy Documents are structured json files stored on the backend side in the DB.
+They are accessible to the user in 'Documents' button in the Flexus UI.
+They are accessible to bots using flexus_policy_document() cloudtool.
+
+```
+/company/
+├── summary                                     # A very compressed version of what the company is
+├── product                                     # Product details
+├── style-guide                                 # Brand colors, fonts
+
+/gtm/
+├── discovery/
+│   ├── archived/
+│   └── {idea-slug}/
+│       ├── idea                                # First Principles Canvas
+```
+
+What should go to a policy document:
+- Explanations of how bots should do their job
+- Forms filled out together with the user
+- Weekly experiments changing the policy
+
+What is not a policy document:
+- Daily reports, temporary files -- use mongo integration instead
+- User's files -- send the user to upload folder in the UI, after that use flexus_read_original() to get contents
+
+Naming convention for all policy documents is kebab-case. For `{idea-slug}` it's 2-4 words kebab-case capturing
+product concept (e.g., `unicorn-horn-car`)
+
+There are 3 types of forms to edit policy documents: QA, Schemed, Microfrontend.
+
+### QA or Questions-Answers
+
+```
+{
+    "styleguide": {
+        "meta": {
+            "author": "Human Name",
+            "created": "20260209",
+            "updated": "20260209",
+        },
+        "section01-colors": {
+            "title": "🎨 Brand Colors (please verify)",
+            "question01-primary": {
+                "q": "Primary Brand Color",
+                "a": "#0066cc",
+                "t": "color"
+            },
+            ...
+        },
+        "section02-typography": {
+            "title": "📝 Typography",
+            ...
+        },
+        ...
+    }
+}
+```
+
+Notable features:
+- Top level tag such as "styleguide" defines the document type
+- "meta" has fixed fields "author", "created", "updated", it might have other fields
+- "sectionXX-name" when sorted shows in the right order in the UI
+- Typical path in json looks like "styleguide/section01-colors/question01-primary/a"
+
+There's a separate code in the UI to edit QA documents.
+
+### Schemed
+
+```
+{
+    "strategy": {
+        "meta": {
+            "author": "Human Name",
+            "created": "20260209",
+            "updated": "20260209",
+        },
+        "schema": {
+            "section03-metrics": {
+                "type": "object",
+                "title": "Metrics",
+                "required": [
+                    "mde",
+                    ...
+                ],
+                "properties": {
+                    "mde": {
+                        "type": "object",
+                        "order": 5,
+                        "required": [
+                            "relative_change",
+                            "confidence"
+                        ],
+                        "properties": {
+                            "confidence": {
+                                "type": "number",
+                                "order": 1
+                            },
+                            "relative_change": {
+                                "type": "number",
+                                "order": 0
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+        ...
+        "section03-metrics": {
+            "mde": {
+                "confidence": 0.8,
+                "relative_change": 100
+            },
+            ...
+        }
+...
+```
+
+Notable features:
+- Has schema and data in the same document
+- Schema is typically copy-pasted from the current bot version that created the document
+- A newer version of the bot overwrites the schema when manipulating data
+- "order" in fields overrides alphabet sorting, to present the form correctly in the UI
+
+There's a separate code in the UI to edit Schemed documents.
+
+### Microfrontend
+
+In the "meta" section it is possible to include "microfrontend": "bot_name":
+
+```
+{"mydoc": {"meta": {"microfrontend": "mybot", "created_at": "..."}, ...}}
+```
+
+The UI will load the html from: `/v1/marketplace/{microfrontend}/{version}/forms/{top_level_key}.html`
+
+The Frog bot has example of microfrontend, see `flexus_simple_bots/frog/frog_bot.py` and `frog/forms/pond_report.html`.
+
+### Choosing Form Editor
+
+Rule of thumb: use QA, if you can't, use Schemed, if you can't, use Microfrontend. QA results in
+minimal handling code for the format, making it the most reliable solution. Schemed can have
+questionable UI representation, especially trying to fit array of objects into a narrow view, and
+requires code that writes the schema correctly. Microfrontend is more of "you are on your own" solution,
+susceptible to bugs, copy-paste, requires debugging, it's more expensive in effort and less reliable
+solution of the three.
 
 
 Coding Style
