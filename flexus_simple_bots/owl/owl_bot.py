@@ -64,11 +64,11 @@ UPDATE_CALIBRATION_TOOL = ckit_cloudtool.CloudTool(
             "section01-calibration": {
                 "type": "object",
                 "properties": {
-                    "budget": {"type": "string", "description": "Budget description including channels (e.g. digital, offline)"},
-                    "timeline": {"type": "string", "description": "Timeline description with goals"},
-                    "hypothesis": {"type": "string", "description": "Full hypothesis: segment, problem, solution, test goal"},
-                    "additional_context": {"type": "string", "description": "Current state, test approach, constraints"},
-                    "product_description": {"type": "string", "description": "What the product/service is"},
+                    "budget": {"type": "string", "description": "Budget description including channels (e.g. digital, offline)", "ui:multiline": 3},
+                    "timeline": {"type": "string", "description": "Timeline description with goals", "ui:multiline": 10},
+                    "hypothesis": {"type": "string", "description": "Full hypothesis: segment, problem, solution, test goal", "ui:multiline": 10},
+                    "additional_context": {"type": "string", "description": "Current state, test approach, constraints", "ui:multiline": 10},
+                    "product_description": {"type": "string", "description": "What the product/service is", "ui:multiline": 10},
                 },
                 "required": ["budget", "timeline", "hypothesis", "additional_context", "product_description"],
                 "additionalProperties": False,
@@ -180,11 +180,11 @@ UPDATE_METRICS_TOOL = ckit_cloudtool.CloudTool(
                         "items": {
                             "type": "object",
                             "properties": {
-                                "metric": {"type": "string"},
+                                "metric": {"type": "string", "ui:size": 2},
                                 "operator": {"type": "string"},
                                 "threshold": {"type": "number"},
                                 "min_events": {"type": "integer"},
-                                "action": {"type": "string"},
+                                "action": {"type": "string", "ui:size": 2},
                             },
                             "required": ["metric", "operator", "threshold", "min_events", "action"],
                             "additionalProperties": False,
