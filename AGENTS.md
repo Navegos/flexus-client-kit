@@ -227,10 +227,6 @@ Minimize system prompt size. Prefer re-writing of existing language to adding mo
 
 Iterate making small changes and running the scenarios again.
 
-Remember each system prompt change requires bot installation, because system prompt is stored in the database:
-
-python -m flexus_simple_bots/my/my_install.py --ws xxx1337
-
 
 Lark Kernels
 ------------
