@@ -400,6 +400,8 @@ async def subscribe_and_produce_callbacks(
         merged_auth = {**workspace_auth, **persona_auth}  # persona takes precedence
 
         auth_needed = persona.marketable_auth_needed or []
+        auth_supported = persona.marketable_auth_supported or []
+        auth_allowed = set(auth_needed) | set(auth_supported)
         missing_auth = [p for p in auth_needed if p not in merged_auth]
 
         if missing_auth:
@@ -408,6 +410,9 @@ async def subscribe_and_produce_callbacks(
             logger.info("  Workspace auth (%s): %s" % (ws_id, list(workspace_auth.keys())))
             logger.info("  Persona auth (%s): %s" % (persona_id, list(persona_auth.keys())))
             return False
+
+        # Only pass auth providers that the bot declared in auth_needed or auth_supported
+        merged_auth = {k: v for k, v in merged_auth.items() if k in auth_allowed}
 
         logger.info("Persona %s starting with auth: %s" % (persona_id, list(merged_auth.keys())))
         for provider, content in merged_auth.items():
