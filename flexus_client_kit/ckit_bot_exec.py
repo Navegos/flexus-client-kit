@@ -365,7 +365,6 @@ class BotsCollection:
         self.running_test_scenario = running_test_scenario
         self.running_happy_yaml = running_happy_yaml
         self.subscribe_to_erp_tables = subscribe_to_erp_tables
-        self.subscribe_to_emsg_types = subscribe_to_emsg_types
         self.auth: Dict[str, Dict[str, Any]] = {}
         self.handled_emsg_ids: List[str] = []
 
@@ -416,18 +415,14 @@ async def subscribe_and_produce_callbacks(
                         continue
 
                     persona_id = upd.news_payload_auth.auth_persona_id
-                    ws_id = upd.news_payload_auth.ws_id
                     provider = upd.news_payload_auth.auth_service_provider
-                    is_workspace_token = not persona_id or persona_id == ""
 
                     logger.info(f"Received auth: persona_id={persona_id}, ws_id={ws_id}, provider={provider}, keys={list(upd.news_payload_auth.auth_key2value.keys())}")
 
-                    # Store auth tokens (use persona_id for persona-scoped, ws_id for workspace-scoped)
-                    auth_key = persona_id if not is_workspace_token else ws_id
-                    if auth_key not in bc.auth:
-                        bc.auth[auth_key] = {}
-                    bc.auth[auth_key][provider] = upd.news_payload_auth.auth_key2value
-                    logger.info(f"Stored in bc.auth[{auth_key}][{provider}] with {len(upd.news_payload_auth.auth_key2value)} keys")
+                    if persona_id not in bc.auth:
+                        bc.auth[persona_id] = {}
+                    bc.auth[persona_id][provider] = upd.news_payload_auth.auth_key2value
+                    logger.info(f"Stored in bc.auth[{persona_id}][{provider}] with {len(upd.news_payload_auth.auth_key2value)} keys")
                     if persona_id in bc.bots_running:
                         bc.bots_running[persona_id].instance_rcx._restart_requested = True
 
@@ -436,14 +431,11 @@ async def subscribe_and_produce_callbacks(
                         continue
 
                     persona_id = upd.news_payload_auth.auth_persona_id
-                    ws_id = upd.news_payload_auth.ws_id
                     provider = upd.news_payload_auth.auth_service_provider
 
-                    # Remove auth tokens
-                    auth_key = persona_id if persona_id else ws_id
-                    if auth_key in bc.auth:
-                        bc.auth[auth_key].pop(provider, None)
-                    logger.info(f"Removed auth {provider} from bc.auth[{auth_key}]")
+                    if persona_id in bc.auth:
+                        bc.auth[persona_id].pop(provider, None)
+                    logger.info(f"Removed auth {provider} from bc.auth[{persona_id}]")
                     if persona_id in bc.bots_running:
                         bc.bots_running[persona_id].instance_rcx._restart_requested = True
 
@@ -455,6 +447,15 @@ async def subscribe_and_produce_callbacks(
                     handled = True
                     persona_id = upd.news_payload_id
 
+                    if bot := bc.bots_running.get(persona_id, None):
+                        if bot.instance_rcx.persona.persona_setup != upd.news_payload_persona.persona_setup:
+                            logger.info("Persona %s setup changed, requesting graceful shutdown" % persona_id)
+                            del bc.bots_running[persona_id]
+                            bc.shutting_down_tasks.add(bot.atask)
+                            bot.atask.add_done_callback(bc.shutting_down_tasks.discard)
+                            bot.instance_rcx._restart_requested = True
+                            bot.instance_rcx._parked_anything_new.set()
+
                     if persona_id not in bc.bots_running:
                         rcx = RobotContext(fclient, upd.news_payload_persona, bc.handled_emsg_ids, bc.auth.get(persona_id, {}))
                         rcx.running_test_scenario = bc.running_test_scenario
@@ -464,6 +465,7 @@ async def subscribe_and_produce_callbacks(
                             atask=asyncio.create_task(crash_boom_bang(fclient, rcx, bc.bot_main_loop)),
                             instance_rcx=rcx,
                         )
+                        reassign_threads = True
 
                 elif upd.news_action == "DELETE":
                     handled = True
