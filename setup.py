@@ -58,7 +58,7 @@ setup(
         "pandas",
         "playwright",
         "openai",
-        "python-telegram-bot",
+        "python-telegram-bot>=20.0",
     ],
     extras_require={
         "dev": [

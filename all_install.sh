@@ -10,4 +10,5 @@ python -m flexus_simple_bots.karen.karen_install --ws "$WS_ID"
 python -m flexus_simple_bots.boss.boss_install --ws "$WS_ID"
 python -m flexus_simple_bots.admonster.admonster_install --ws "$WS_ID"
 python -m flexus_simple_bots.productman.productman_install --ws "$WS_ID"
+python -m flexus_simple_bots.telegram_groupmod.telegram_groupmod_install --ws "$WS_ID"
 
