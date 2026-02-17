@@ -18,7 +18,7 @@ class FDevEnvironmentOutput:
     devenv_setup_script: str
     devenv_env_vars: Optional[Any]
     devenv_docker_image: str
-    devenv_auth_id: Optional[str]
+    has_external_auth: bool
     devenv_created_ts: float
     devenv_modified_ts: float
 
