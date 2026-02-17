@@ -411,34 +411,25 @@ async def subscribe_and_produce_callbacks(
             if upd.news_about == "flexus_external_auth":
                 handled = True
                 if upd.news_action in ["INSERT", "UPDATE"]:
-                    if upd.news_payload_auth is None:
-                        continue
-
                     persona_id = upd.news_payload_auth.auth_persona_id
                     provider = upd.news_payload_auth.auth_service_provider
-
-                    logger.info(f"Received auth: persona_id={persona_id}, ws_id={ws_id}, provider={provider}, keys={list(upd.news_payload_auth.auth_key2value.keys())}")
-
                     if persona_id not in bc.auth:
                         bc.auth[persona_id] = {}
                     bc.auth[persona_id][provider] = upd.news_payload_auth.auth_key2value
-                    logger.info(f"Stored in bc.auth[{persona_id}][{provider}] with {len(upd.news_payload_auth.auth_key2value)} keys")
+                    logger.info(f"auth stored bc.auth[{persona_id}][{provider}] = {len(upd.news_payload_auth.auth_key2value)} keys")
                     if persona_id in bc.bots_running:
                         bc.bots_running[persona_id].instance_rcx._restart_requested = True
 
                 elif upd.news_action == "DELETE":
                     if upd.news_payload_auth is None:
                         continue
-
                     persona_id = upd.news_payload_auth.auth_persona_id
                     provider = upd.news_payload_auth.auth_service_provider
-
                     if persona_id in bc.auth:
                         bc.auth[persona_id].pop(provider, None)
-                    logger.info(f"Removed auth {provider} from bc.auth[{persona_id}]")
+                    logger.info(f"auth removed {provider!r} from bc.auth[{persona_id}]")
                     if persona_id in bc.bots_running:
                         bc.bots_running[persona_id].instance_rcx._restart_requested = True
-
 
             elif upd.news_about == "flexus_persona":
                 if upd.news_action in ["INSERT", "UPDATE"]:
